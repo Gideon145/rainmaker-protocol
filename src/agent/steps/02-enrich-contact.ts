@@ -29,7 +29,7 @@ export async function enrichContact(prospect: Prospect): Promise<Prospect> {
     timestamp: nowIso(),
     action: `CONTACT ENRICHED — ${prospect.company.name}`,
     reasoning: contact
-      ? `Located ${contact.firstName} ${contact.lastName} (${contact.title}) via LinkedIn/Clado enrichment. Email: ${contact.email}.`
+      ? `Located ${contact.firstName} ${contact.lastName} (${contact.title}) via Hunter.io email enrichment. Email: ${contact.email}.`
       : `No decision-maker contact found for ${prospect.company.domain}. Skipping.`,
     cost: 0.015,
     txHash: null,

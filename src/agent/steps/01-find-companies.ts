@@ -7,7 +7,7 @@ import type { Run, Company } from "@/lib/providers/types";
 export async function findCompanies(run: Run): Promise<Company[]> {
   eventBus.emit(run.id, "audit_entry", {
     action: "SCANNING TARGET DATABASE",
-    reasoning: `Searching for companies that need ${run.skill} developers using Apollo + BuiltWith intelligence.`,
+    reasoning: `Searching for companies that need ${run.skill} developers using Tavily AI search intelligence.`,
     status: "info",
   });
 
@@ -19,8 +19,8 @@ export async function findCompanies(run: Run): Promise<Company[]> {
     prospectId: null,
     timestamp: nowIso(),
     action: "TARGET ACQUISITION COMPLETE",
-    reasoning: `Identified ${results.length} potential targets using skill-match heuristics on Apollo organization database. Filtered by tech stack alignment with "${run.skill}".`,
-    cost: 0.043, // Apollo org search cost estimate
+    reasoning: `Identified ${results.length} potential targets using Tavily AI web search. Filtered LinkedIn company profiles by tech stack alignment with "${run.skill}".`,
+    cost: 0.038, // Tavily search cost estimate
     txHash: null,
     status: "success",
   });

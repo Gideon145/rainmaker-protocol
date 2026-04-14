@@ -16,16 +16,16 @@ import { ofac as mockOfac }        from "./mock/ofac";
 import { claude as mockClaude }    from "./mock/claude";
 import { agentmail as mockMail }   from "./mock/agentmail";
 
-import { apollo as realApollo }    from "./real/apollo";
-import { clado as realClado }      from "./real/clado";
+import { tavily as realTavily }    from "./real/tavily";
+import { hunter as realHunter }    from "./real/hunter";
 import { ofac as realOfac }        from "./real/ofac";
 import { claude as realClaude }    from "./real/claude";
 import { agentmail as realMail }   from "./real/agentmail";
 
 const USE_MOCK = process.env.USE_MOCK !== "false"; // default ON for safety
 
-export const companies: CompanyProvider   = USE_MOCK ? mockApollo : realApollo;
-export const contacts: ContactProvider   = USE_MOCK ? mockClado  : realClado;
+export const companies: CompanyProvider   = USE_MOCK ? mockApollo : realTavily;
+export const contacts: ContactProvider   = USE_MOCK ? mockClado  : realHunter;
 export const compliance: ComplianceProvider = USE_MOCK ? mockOfac   : realOfac;
 export const llm: LLMProvider           = USE_MOCK ? mockClaude : realClaude;
 export const mail: MailProvider         = USE_MOCK ? mockMail   : realMail;
