@@ -6,6 +6,7 @@
 [![Hackathon](https://img.shields.io/badge/Locus%20Paygentic-Hackathon%20%231-00e5ff?style=for-the-badge)](https://paygentic-week1.devfolio.co)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Security](https://img.shields.io/badge/Security_Review-2_patched-00c853?style=for-the-badge&logo=shield&logoColor=white)](https://github.com/Gideon145/rainmaker-protocol/commit/b1f904c)
 
 ---
 
@@ -301,6 +302,30 @@ The Locus webhook route never skips signature verification. There is no `if (sec
 
 **8. Input validation before any compute**
 Both `/start` and `/stream` reject `skill` strings over 120 characters before touching the rate limiter, allocating a `runId`, or spinning up the SSE stream. This prevents prompt-injection via oversized skill strings and blocks trivially cheap DoS (large string hashing on every rate-limit check).
+
+---
+
+## Security Review
+
+**Conducted:** April 14, 2026 · **Scope:** API layer, rate limiting, webhook verification, input handling · **Result:** 2 vulnerabilities identified and patched (commit [`b1f904c`](https://github.com/Gideon145/rainmaker-protocol/commit/b1f904c))
+
+### Vulnerabilities Found & Fixed
+
+| # | Vulnerability | Severity | Fix |
+|---|---|---|---|
+| 1 | **IP spoofing via `x-forwarded-for`** — rate limiter read the first (client-controlled) value from the header, allowing bypass by setting a fake IP | Medium | `getClientIp()` now prefers `x-real-ip` (Vercel edge-set, unspoof able); falls back to the **last** `x-forwarded-for` entry (appended by the trusted proxy) |
+| 2 | **Prompt injection via `skill` field** — unsanitized user input was passed directly into Claude prompt, allowing manipulation of AI-generated email content | Medium | `sanitizeSkill()` strips all characters outside `[a-zA-Z0-9 .,+#\-()&/]` before the value reaches the LLM — applied at both `/start` and `/stream` entry points |
+
+### Existing Strengths (Pre-Audit)
+
+| Control | Implementation |
+|---|---|
+| Webhook HMAC verification | Unconditional — no bypass path, `crypto.timingSafeEqual` with length guard |
+| Rate limiting on both entry points | `/start` and `/stream` share the same `Map` — direct `/stream` calls can't bypass `/start` limit |
+| OFAC hard block | Fuzzy-match at ≥75 confidence — prospect permanently flagged, never contacted |
+| Budget cap enforced pre-prospect | Checked before each company, not after — prevents overspend |
+| Input length validation before rate check | Blocks prompt-injection via oversized strings and cheap DoS |
+| Checkout session isolation | One session per prospect, `paymentTxHash` idempotency on delivery |
 
 ---
 
