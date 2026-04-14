@@ -2,13 +2,14 @@ import { mail } from "@/lib/providers";
 import {
   createRun,
   updateRun,
+  getRun,
   finishRun,
   upsertProspect,
   addAuditEntry,
 } from "@/lib/store";
 import { uuid, nowIso, sleep } from "@/lib/utils";
 import { eventBus } from "@/agent/events";
-import type { Company, Prospect } from "@/lib/providers/types";
+import type { Prospect } from "@/lib/providers/types";
 
 import { findCompanies } from "./steps/01-find-companies";
 import { enrichContact } from "./steps/02-enrich-contact";
@@ -18,8 +19,11 @@ import { generateEmail } from "./steps/05-generate-email";
 import { sendOutreach } from "./steps/06-send-outreach";
 import { pollForReplies } from "./steps/07-poll-replies";
 
-// Budget limit — orchestrator stops processing new prospects after this
-const BUDGET_LIMIT_USDC = 5.00;
+// Budget limit — exported so tests can reference the real constant
+export const BUDGET_LIMIT_USDC = 5.00;
+
+// Cost billed by AgentMail for inbox creation (approximate — update once live)
+const AGENTMAIL_INBOX_COST = 2.00;
 
 export interface StartRunParams {
   skill: string;
@@ -74,7 +78,7 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
       timestamp: nowIso(),
       action: "AGENT INBOX ONLINE",
       reasoning: `AgentMail inbox provisioned: ${inbox.email}. All outreach will originate from this address. Reply monitoring active.`,
-      cost: 2.00, // AgentMail inbox creation cost
+      cost: AGENTMAIL_INBOX_COST,
       txHash: null,
       status: "success",
     });
@@ -83,7 +87,7 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
       action: "AGENT INBOX ONLINE",
       reasoning: `Inbox: ${inbox.email}`,
       status: "success",
-      cost: 2.00,
+      cost: AGENTMAIL_INBOX_COST,
     });
   } catch (err) {
     // Non-fatal — continue with null inbox (will use mock in mock mode)
@@ -101,10 +105,7 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
   }
 
   // ── Step 1: Find companies ───────────────────────────────────────────────
-  await findCompanies(run);
-
-  const companiesBuffer = (run as typeof run & { _companiesBuffer?: Company[] })
-    ._companiesBuffer ?? [];
+  const companiesBuffer = await findCompanies(run);
 
   if (!companiesBuffer.length) {
     finishRun(runId, "failed", "No companies found.");
@@ -123,7 +124,7 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
 
   for (const company of companiesBuffer) {
     // Check budget before each prospect
-    const currentRun = (await import("@/lib/store")).getRun(runId)!;
+    const currentRun = getRun(runId)!
     if (currentRun.totalSpentUsdc >= BUDGET_LIMIT_USDC) {
       budgetExhausted = true;
       addAuditEntry(runId, {
@@ -170,8 +171,7 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
     upsertProspect(runId, prospect);
     eventBus.emit(runId, "prospect_update", prospect);
 
-    // Small delay between prospects for visual drama in demo
-    await sleep(80);
+    await sleep(80); // brief pacing delay between API calls
 
     try {
       // 1. Enrich contact
@@ -225,7 +225,7 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
   await pollForReplies(runId);
 
   // ── Finish ───────────────────────────────────────────────────────────────
-  const preFinishRun = (await import("@/lib/store")).getRun(runId)!;
+  const preFinishRun = getRun(runId)!;
   const finalStatus = budgetExhausted ? "budget_exhausted" : "completed";
   finishRun(runId, finalStatus);
 
@@ -242,6 +242,6 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
   });
 
   // Emit FULL run object so dashboard can use it directly without wiping state
-  const completedRun = (await import("@/lib/store")).getRun(runId)!;
+  const completedRun = getRun(runId)!;
   eventBus.emit(runId, "run_completed", completedRun);
 }

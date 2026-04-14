@@ -29,18 +29,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "no sessionId" }, { status: 400 });
   }
 
-  // Verify HMAC-SHA256 signature
+  // Verify HMAC-SHA256 signature — always required, no bypass path.
+  // Rejecting unknown sessions prevents fake payment injection.
   const webhookSecret = getWebhookSecret(sessionId);
-  if (webhookSecret) {
-    const signature = req.headers.get("x-signature-256") ?? "";
-    const expected = `sha256=${crypto
-      .createHmac("sha256", webhookSecret)
-      .update(rawBody)
-      .digest("hex")}`;
+  if (!webhookSecret) {
+    return NextResponse.json({ error: "unknown session" }, { status: 401 });
+  }
 
-    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-      return NextResponse.json({ error: "invalid signature" }, { status: 401 });
-    }
+  const signature = req.headers.get("x-signature-256") ?? "";
+  const expected = `sha256=${crypto
+    .createHmac("sha256", webhookSecret)
+    .update(rawBody)
+    .digest("hex")}`;
+
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
   if (payload.event !== "checkout.session.paid") {

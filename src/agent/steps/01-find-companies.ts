@@ -2,9 +2,9 @@ import { companies } from "@/lib/providers";
 import { addAuditEntry, updateRun } from "@/lib/store";
 import { uuid, nowIso } from "@/lib/utils";
 import { eventBus } from "@/agent/events";
-import type { Run } from "@/lib/providers/types";
+import type { Run, Company } from "@/lib/providers/types";
 
-export async function findCompanies(run: Run): Promise<void> {
+export async function findCompanies(run: Run): Promise<Company[]> {
   eventBus.emit(run.id, "audit_entry", {
     action: "SCANNING TARGET DATABASE",
     reasoning: `Searching for companies that need ${run.skill} developers using Apollo + BuiltWith intelligence.`,
@@ -34,6 +34,6 @@ export async function findCompanies(run: Run): Promise<void> {
     cost: 0.043,
   });
 
-  // Store companies in run (they'll be converted to prospects by orchestrator)
-  (run as Run & { _companiesBuffer?: typeof results })._companiesBuffer = results;
+  // Return companies for the orchestrator to process
+  return results;
 }

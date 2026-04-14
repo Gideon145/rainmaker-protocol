@@ -1,7 +1,8 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { eventBus } from "@/agent/events";
 import { getRun, createRun } from "@/lib/store";
 import { executeRun } from "@/agent/orchestrator";
+import { isRateLimited } from "@/lib/rate-limit";
 import type { AgentEvent } from "@/lib/providers/types";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,18 @@ export async function GET(req: NextRequest) {
 
   const autostart  = !!(skill && rateStr);
   const hourlyRate = autostart ? Math.max(10, Math.min(500, Number(rateStr) || 50)) : 0;
+
+  // Rate-limit the autostart path — the real execution entry point.
+  // Guarding only /start was bypassable by calling /stream directly with skill+rate.
+  if (autostart) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded — max 3 runs per 5 minutes" },
+        { status: 429 },
+      );
+    }
+  }
 
   const encoder = new TextEncoder();
 

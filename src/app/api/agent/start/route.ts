@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uuid } from "@/lib/utils";
-
-// ─── Simple in-memory rate limiter ───────────────────────────────────────────
-// Max 3 run starts per IP per 5-minute window. Protects Locus credits from abuse.
-const WINDOW_MS  = 5 * 60 * 1000; // 5 minutes
-const MAX_PER_IP = 3;
-const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
-
-function isRateLimited(ip: string): boolean {
-  const now   = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now - entry.windowStart > WINDOW_MS) {
-    rateLimitMap.set(ip, { count: 1, windowStart: now });
-    return false;
-  }
-  if (entry.count >= MAX_PER_IP) return true;
-  entry.count++;
-  return false;
-}
+import { isRateLimited } from "@/lib/rate-limit";
 
 // Just generate a runId — the agent starts from the SSE stream route
 // so it runs in the same long-lived invocation and Vercel can't kill it

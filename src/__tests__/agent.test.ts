@@ -1,24 +1,22 @@
 /**
  * RAINMAKER PROTOCOL — Core Agent Tests
  *
- * Three tests covering the three most critical invariants of the system:
- * 1. OFAC compliance blocks sanctioned entities before outreach
- * 2. Budget controller hard-stops the pipeline at $5.00 USDC
- * 3. run_completed always emits a full Run object (not a stub)
+ * Covers the three most critical invariants of the system:
+ * 1. OFAC provider   — mock correctly flags/clears entities
+ * 2. OFAC step fn    — orchestrator step sets correct prospect status
+ * 3. Budget ctrl     — exported constant + exhausted-run integration test
+ * 4. run_completed   — full Run object emitted, not a stub
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 
-// ─── Test 1: OFAC screening blocks a sanctioned entity ─────────────────────
+// ─── 1. OFAC provider (mock) ───────────────────────────────────────────────
 
-describe("OFAC screening", () => {
-  it("returns ofac_blocked status and non-empty matches for a sanctioned entity", async () => {
-    // Use the mock OFAC provider directly — no external calls
+describe("OFAC provider (mock)", () => {
+  it("returns ofac_blocked result for a sanctioned entity", async () => {
     process.env.USE_MOCK = "true";
     const { compliance } = await import("@/lib/providers");
-
     const result = await compliance.screenOFAC("Volkov Syndicate LLC", "Russia");
-
     expect(result.clean).toBe(false);
     expect(result.matches.length).toBeGreaterThan(0);
     expect(result.matches[0].score).toBeGreaterThanOrEqual(75);
@@ -28,93 +26,117 @@ describe("OFAC screening", () => {
   it("returns clean for a legitimate company", async () => {
     process.env.USE_MOCK = "true";
     const { compliance } = await import("@/lib/providers");
-
     const result = await compliance.screenOFAC("Acme Software Inc", "US");
-
     expect(result.clean).toBe(true);
     expect(result.matches).toHaveLength(0);
   });
 });
 
-// ─── Test 2: Budget controller enforces the $5 hard cap ────────────────────
+// ─── 2. screenOFAC step function ──────────────────────────────────────────
+// Tests the actual orchestrator step — not just the raw provider.
+// Verifies prospect.status is correctly set and persisted to the store.
 
-describe("Budget controller", () => {
-  it("stops processing new prospects when totalSpentUsdc >= BUDGET_LIMIT", async () => {
-    // Simulate a run that has already spent $5.00
-    const { createRun, updateRun, getRun } = await import("@/lib/store");
-    const runId = "test-budget-" + Date.now();
+describe("screenOFAC step function", () => {
+  async function makeProspect(runId: string, companyName: string) {
+    const { createRun, upsertProspect } = await import("@/lib/store");
+    const { uuid, nowIso } = await import("@/lib/utils");
+    createRun({ id: runId, skill: "React", hourlyRate: 50 });
+    const prospect = {
+      id: uuid(), runId,
+      company: {
+        id: uuid(), name: companyName, domain: "test.example.com",
+        industry: "SaaS", size: "11-50", techStack: ["React"],
+        location: "US", description: "Test company",
+      },
+      contact: null, ofacResult: null, status: "queued" as const,
+      outreachEmail: null, checkoutSessionId: null, checkoutUrl: null,
+      agentMailMessageId: null, paymentTxHash: null, paidAt: null,
+      deliveredAt: null, errorMessage: null,
+      createdAt: nowIso(), updatedAt: nowIso(),
+    };
+    upsertProspect(runId, prospect);
+    return prospect;
+  }
 
-    createRun({ id: runId, skill: "test", hourlyRate: 50 });
-    updateRun(runId, { totalSpentUsdc: 5.00 });
-
-    const run = getRun(runId)!;
-    expect(run.totalSpentUsdc).toBeGreaterThanOrEqual(5.00);
-
-    // The orchestrator checks this condition before each prospect
-    // Verify the check logic: budget exhausted when spent >= limit
-    const BUDGET_LIMIT_USDC = 5.00;
-    const budgetExhausted = run.totalSpentUsdc >= BUDGET_LIMIT_USDC;
-    expect(budgetExhausted).toBe(true);
+  it("sets prospect.status to ofac_blocked for a sanctioned entity", async () => {
+    process.env.USE_MOCK = "true";
+    const prospect = await makeProspect("test-step-blocked-" + Date.now(), "Volkov Syndicate LLC");
+    const { screenOFAC } = await import("@/agent/steps/03-screen-ofac");
+    const result = await screenOFAC(prospect);
+    expect(result.status).toBe("ofac_blocked");
+    expect(result.ofacResult?.clean).toBe(false);
+    expect(result.errorMessage).toMatch(/OFAC MATCH/);
   });
 
-  it("allows processing when under budget", async () => {
-    const { createRun, getRun } = await import("@/lib/store");
-    const runId = "test-budget-under-" + Date.now();
-
-    createRun({ id: runId, skill: "test", hourlyRate: 50 });
-    const run = getRun(runId)!;
-
-    const BUDGET_LIMIT_USDC = 5.00;
-    const budgetExhausted = run.totalSpentUsdc >= BUDGET_LIMIT_USDC;
-    expect(budgetExhausted).toBe(false);
+  it("sets prospect.status to generating_email for a clean company", async () => {
+    process.env.USE_MOCK = "true";
+    const prospect = await makeProspect("test-step-clear-" + Date.now(), "Nexus Digital");
+    const { screenOFAC } = await import("@/agent/steps/03-screen-ofac");
+    const result = await screenOFAC(prospect);
+    expect(result.status).toBe("generating_email");
+    expect(result.ofacResult?.clean).toBe(true);
+    expect(result.errorMessage).toBeNull();
   });
 });
 
-// ─── Test 3: run_completed event carries a full Run object ─────────────────
+// ─── 3. Budget controller ─────────────────────────────────────────────────
+
+describe("Budget controller", () => {
+  it("BUDGET_LIMIT_USDC constant is $5.00", async () => {
+    const { BUDGET_LIMIT_USDC } = await import("@/agent/orchestrator");
+    expect(BUDGET_LIMIT_USDC).toBe(5.00);
+  });
+
+  it("run reaches budget_exhausted status when pre-spent at the limit", async () => {
+    process.env.USE_MOCK = "true";
+    const { createRun, updateRun, getRun } = await import("@/lib/store");
+    const { executeRun, BUDGET_LIMIT_USDC } = await import("@/agent/orchestrator");
+    const runId = "test-budget-exec-" + Date.now();
+    createRun({ id: runId, skill: "React", hourlyRate: 50 });
+    updateRun(runId, { totalSpentUsdc: BUDGET_LIMIT_USDC });
+    await executeRun(runId, { skill: "React", hourlyRate: 50 });
+    const finished = getRun(runId)!;
+    expect(finished.status).toBe("budget_exhausted");
+  }, 15_000);
+});
+
+// ─── 4. EventBus run_completed payload ────────────────────────────────────
 
 describe("EventBus run_completed payload", () => {
-  it("emitted payload has prospects and auditLog arrays (not a stub)", async () => {
+  it("emitted payload is a full Run with prospects and auditLog (not a stub)", async () => {
     const { eventBus } = await import("@/agent/events");
-    const { createRun, upsertProspect, addAuditEntry } = await import("@/lib/store");
+    const { createRun, upsertProspect, addAuditEntry, getRun } = await import("@/lib/store");
     const { uuid, nowIso } = await import("@/lib/utils");
 
     const runId = "test-event-" + Date.now();
     createRun({ id: runId, skill: "full-stack", hourlyRate: 50 });
-
-    // Add a prospect and an audit entry to the run
     upsertProspect(runId, {
       id: uuid(), runId,
       company: { id: uuid(), name: "Test Co", domain: "test.io", industry: "SaaS", size: "11-50", techStack: ["React"], location: "US", description: "Test" },
       contact: null, ofacResult: null, status: "queued",
       outreachEmail: null, checkoutSessionId: null, checkoutUrl: null,
-      agentMailMessageId: null, paymentTxHash: null, paidAt: null, deliveredAt: null,
-      errorMessage: null, createdAt: nowIso(), updatedAt: nowIso(),
+      agentMailMessageId: null, paymentTxHash: null, paidAt: null,
+      deliveredAt: null, errorMessage: null,
+      createdAt: nowIso(), updatedAt: nowIso(),
     });
-
     addAuditEntry(runId, {
       id: uuid(), runId, prospectId: null, timestamp: nowIso(),
-      action: "TEST", reasoning: "test entry", cost: 0, txHash: null, status: "info",
+      action: "TEST", reasoning: "entry", cost: 0, txHash: null, status: "info",
     });
 
-    // Capture what the eventBus emits
     let capturedPayload: unknown = null;
-    const unsub = eventBus.subscribe(runId, (event) => {
-      if (event.type === "run_completed") capturedPayload = event.payload;
+    const unsub = eventBus.subscribe(runId, (e) => {
+      if (e.type === "run_completed") capturedPayload = e.payload;
     });
-
-    // Emit as the orchestrator does — full run object
-    const { getRun } = await import("@/lib/store");
-    const fullRun = getRun(runId)!;
-    eventBus.emit(runId, "run_completed", fullRun);
+    eventBus.emit(runId, "run_completed", getRun(runId)!);
     unsub();
 
-    // Payload must be a full Run, not {status, totalSpent, totalEarned}
     expect(capturedPayload).not.toBeNull();
-    const payload = capturedPayload as Record<string, unknown>;
-    expect(Array.isArray(payload.prospects)).toBe(true);
-    expect(Array.isArray(payload.auditLog)).toBe(true);
-    expect((payload.prospects as unknown[]).length).toBeGreaterThan(0);
-    expect((payload.auditLog as unknown[]).length).toBeGreaterThan(0);
-    expect(payload.id).toBe(runId);
+    const p = capturedPayload as Record<string, unknown>;
+    expect(Array.isArray(p.prospects)).toBe(true);
+    expect(Array.isArray(p.auditLog)).toBe(true);
+    expect((p.prospects as unknown[]).length).toBeGreaterThan(0);
+    expect((p.auditLog as unknown[]).length).toBeGreaterThan(0);
+    expect(p.id).toBe(runId);
   });
 });
