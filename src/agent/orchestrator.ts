@@ -47,11 +47,7 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
   const run = (await import("@/lib/store")).getRun(runId)!;
 
   // ── Step 0: Create AgentMail inbox ──────────────────────────────────────
-  eventBus.emit(runId, "run_started", {
-    runId,
-    skill: params.skill,
-    hourlyRate: params.hourlyRate,
-  });
+  eventBus.emit(runId, "run_started", run);
 
   addAuditEntry(runId, {
     id: uuid(),

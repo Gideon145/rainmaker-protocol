@@ -104,20 +104,18 @@ function HeroBanner() {
         </div>
         <div className="flex flex-col gap-2 shrink-0 text-right">
           <div style={{ fontSize: "0.6rem" }} className="text-sub uppercase tracking-widest">Powered by</div>
-          <div className="flex flex-wrap gap-2 justify-end">
+          <div className="flex flex-col gap-1.5 items-end">
             {[
-              { name: "Locus",    color: "#00ff9f", icon: "◈", desc: "Checkout + Payments" },
-              { name: "AgentMail",color: "#00e5ff", icon: "✉", desc: "AI Inbox" },
-              { name: "Apollo",   color: "#a78bfa", icon: "◉", desc: "Lead Discovery" },
-              { name: "Clado",    color: "#f59e0b", icon: "◎", desc: "Contact Enrichment" },
-              { name: "OFAC",     color: "#f43f5e", icon: "⚠", desc: "Sanctions Screen" },
-              { name: "Claude",   color: "#fb923c", icon: "✦", desc: "AI Copywriting" },
-            ].map(({ name, color, icon, desc }) => (
-              <div key={name} title={desc}
-                className="flex items-center gap-1.5 px-2 py-1 rounded"
-                style={{ border: `1px solid ${color}33`, background: `${color}0d` }}>
-                <span style={{ color, fontSize: "0.75rem" }}>{icon}</span>
-                <span style={{ color, fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.05em" }}>{name}</span>
+              { name: "Locus",     color: "#00ff9f", icon: "◈" },
+              { name: "AgentMail", color: "#00e5ff", icon: "✉" },
+              { name: "Apollo",    color: "#a78bfa", icon: "◉" },
+              { name: "Clado",     color: "#f59e0b", icon: "◎" },
+              { name: "OFAC",      color: "#f43f5e", icon: "⚠" },
+              { name: "Claude AI", color: "#fb923c", icon: "✦" },
+            ].map(({ name, color, icon }) => (
+              <div key={name} className="flex items-center gap-1.5">
+                <span style={{ color, fontSize: "0.7rem" }}>{icon}</span>
+                <span className="badge badge-dim">{name}</span>
               </div>
             ))}
           </div>
@@ -726,11 +724,15 @@ export default function DashboardPage() {
         }
         if (ev.type === "prospect_update") {
           const p = ev.payload as Prospect;
-          setRun((prev) => prev ? { ...prev, prospects: prev.prospects.find((x) => x.id === p.id) ? prev.prospects.map((x) => x.id === p.id ? p : x) : [...prev.prospects, p] } : prev);
+          setRun((prev) => {
+            if (!prev) return prev;
+            const list = prev.prospects ?? [];
+            return { ...prev, prospects: list.find((x: Prospect) => x.id === p.id) ? list.map((x: Prospect) => x.id === p.id ? p : x) : [...list, p] };
+          });
         }
         if (ev.type === "audit_entry") {
           const entry = ev.payload as AuditEntry;
-          setRun((prev) => prev ? { ...prev, auditLog: [...prev.auditLog, entry] } : prev);
+          setRun((prev) => prev ? { ...prev, auditLog: [...(prev.auditLog ?? []), entry] } : prev);
         }
         if (ev.type === "balance_update")   setBalance(ev.payload as WalletBalance);
         if (ev.type === "payment_received") { const p = ev.payload as Prospect; setToast(`✓ Payment received from ${p.company?.name ?? "prospect"}!`); }
