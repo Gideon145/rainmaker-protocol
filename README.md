@@ -13,7 +13,7 @@
 
 Freelancers and agencies spend **4–8 hours per week** manually searching job boards, finding contacts, writing cold emails, and chasing payments. The conversion rate for cold outreach is under 3%. The unit economics are broken: high time cost, low yield, slow payment collection.
 
-**RAINMAKER PROTOCOL** inverts this entirely. A single agent invocation — parameterised only by your skill and hourly rate — autonomously executes the entire acquisition-to-payment pipeline. The agent operates within a hard $5 USDC budget cap and delivers a measurable **18–20× ROI** in under 5 seconds of processing time.
+**RAINMAKER PROTOCOL** inverts this entirely. A single agent invocation — parameterised only by your skill and hourly rate — autonomously executes the entire acquisition-to-payment pipeline end-to-end, within a hard $5 USDC budget cap.
 
 ---
 
@@ -396,14 +396,6 @@ src/
         ├── real/                 # Apollo, AgentMail, Clado, Claude, OFAC
         └── mock/                 # Mock providers with realistic delays
 ```
-
----
-
-## Hackathon Context
-
-Built for **[Locus Paygentic Hackathon #1](https://paygentic-week1.devfolio.co)** — the first hackathon focused on payment-native AI agents.
-
-**Why this wins:** Most hackathon submissions demo an agent that *finds* work or *generates* emails. RAINMAKER Protocol does both of those and then **actually collects payment** — on-chain, in USDC, with a full audit trail, compliance screening, and automated delivery. The Locus integration is not a wrapper around a payment link. It is the economic backbone of the entire agent loop: without Locus Checkout, there is no autonomous revenue. That is the point.
 
 ---
 
