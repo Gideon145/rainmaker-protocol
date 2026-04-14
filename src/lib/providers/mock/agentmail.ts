@@ -25,6 +25,9 @@ export const agentMailBus = new EventEmitter();
 export const agentmail: MailProvider = {
   async createInbox(username: string) {
     await new Promise((r) => setTimeout(r, 1000));
+    // Reset per-run so every new run gets an auto-reply
+    firstPayTarget.inboxId = null;
+    firstPayTarget.messageId = null;
     const inboxId = `mock_inbox_${username}_${Date.now()}`;
     const email = `${username}@agentmail.to`;
     inboxes.set(inboxId, { email });

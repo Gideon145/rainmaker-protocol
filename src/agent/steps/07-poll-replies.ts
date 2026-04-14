@@ -19,37 +19,16 @@ export async function pollForReplies(runId: string): Promise<void> {
   const inboxId = run.agentInboxId;
   const start = Date.now();
 
-  // In mock mode — listen to the event bus directly (faster than polling)
+  // In mock mode — simulate payment directly after pipeline settles (no race condition)
   if (USE_MOCK) {
-    await new Promise<void>((resolve) => {
-      const handler = async ({ messageId, reply }: {
-        inboxId: string;
-        messageId: string;
-        reply: { id: string; from: string };
-      }) => {
-        if (seenMessages.has(reply.id)) return;
-        seenMessages.add(reply.id);
-
-        // Find which prospect sent this message
-        const currentRun = getRun(runId);
-        const prospect = currentRun?.prospects.find(
-          (p) => p.agentMailMessageId === messageId,
-        );
-        if (!prospect) return;
-
-        agentMailBus.off("reply", handler);
-        await handlePaymentConfirmed(runId, prospect.id, `mock_tx_${uuid()}`);
-        resolve();
-      };
-
-      agentMailBus.on("reply", handler);
-
-      // Auto-resolve on timeout
-      setTimeout(() => {
-        agentMailBus.off("reply", handler);
-        resolve();
-      }, POLL_TIMEOUT_MS);
-    });
+    await sleep(6_000); // wait for all outreach emails to be sent
+    const currentRun = getRun(runId);
+    const prospect = currentRun?.prospects.find(
+      (p) => p.status === "awaiting_payment" || p.status === "outreach_sent",
+    );
+    if (prospect) {
+      await handlePaymentConfirmed(runId, prospect.id, `mock_tx_${uuid()}`);
+    }
     return;
   }
 

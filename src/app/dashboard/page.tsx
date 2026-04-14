@@ -680,7 +680,8 @@ export default function DashboardPage() {
   const [launching, setLaunching] = useState(false);
   const [toast, setToast]         = useState<string | null>(null);
   const [sseConnected, setSSE]    = useState(false);
-  const esRef                     = useRef<EventSource | null>(null);
+  const esRef           = useRef<EventSource | null>(null);
+  const pendingParams   = useRef<{ skill: string; rate: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/agent/runs")
@@ -696,9 +697,12 @@ export default function DashboardPage() {
   const connectSSE = useCallback((id: string) => {
     esRef.current?.close();
     setSSE(false);
-    const es = new EventSource(`/api/agent/stream?runId=${id}`);
+    const p   = pendingParams.current;
+    pendingParams.current = null;
+    const qs  = p ? `&skill=${encodeURIComponent(p.skill)}&rate=${p.rate}` : "";
+    const es  = new EventSource(`/api/agent/stream?runId=${id}${qs}`);
     esRef.current = es;
-    es.onopen  = () => setSSE(true);
+    es.onopen  = () => { setSSE(true); setLaunching(false); };
     es.onerror = () => setSSE(false);
     es.onmessage = (e) => {
       try {
@@ -734,6 +738,7 @@ export default function DashboardPage() {
       const data = (await res.json()) as { runId?: string; error?: string };
       if (!data.runId) throw new Error(data.error ?? "No runId returned");
       const newRun: Run = { id: data.runId, skill, hourlyRate, status: "running", prospects: [], auditLog: [], totalSpentUsdc: 0, totalEarnedUsdc: 0, startedAt: new Date().toISOString(), completedAt: null, errorMessage: null, agentInboxId: null, agentEmail: null };
+      pendingParams.current = { skill, rate: hourlyRate }; // picked up by connectSSE via useEffect
       setRunId(data.runId);
       setRun(newRun);
       setAllRuns((p) => [newRun, ...p]);
