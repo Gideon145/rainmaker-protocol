@@ -23,6 +23,8 @@
 
 > Left to right: idle dashboard → 8-step pipeline view → active run with live OFAC block and audit stream → MISSION COMPLETE ($2.64 spent · $50.00 earned · **18.9x ROI**)
 
+▶ **[Watch the demo on YouTube](https://youtube.com/shorts/-2F4Q7gZOaQ?feature=share)**
+
 ---
 
 ## The Problem
@@ -41,8 +43,35 @@ Freelancers and agencies spend **4–8 hours per week** manually searching job b
 | Cost per company processed | ~$0.24 USDC (enrichment + email + checkout) |
 | AgentMail inbox (one-time per run) | $2.00 USDC |
 | Companies reachable per $5 budget | 11–12 |
-| Pipeline execution time (mock) | < 5 seconds end-to-end |
-| Pipeline execution time (real APIs) | ~30–60 seconds |
+| Pipeline execution time | ~30–60 seconds (real APIs) |
+
+---
+
+## Locus Integration
+
+Locus is the payment backbone of the entire pipeline. Without Locus, there is no autonomous payment collection — the agent would stop at outreach and wait for a human to invoice.
+
+| Locus API | Used for | Why it matters |
+|---|---|---|
+| **Checkout Session** (`POST /checkout/sessions`) | Creates a unique, time-limited USDC payment URL per prospect | Every cold email contains a one-click payment link — client pays before any human is involved |
+| **Session Status** (`GET /checkout/sessions/:id`) | Polling to detect `PAID` status during the 10-minute wait window | Agent confirms payment on-chain before triggering work delivery |
+| **Webhook** (`POST /api/webhooks/locus`) | Real-time `CHECKOUT_PAID` event push | Instant delivery trigger — no polling lag when webhook fires |
+| **HMAC Verification** | `X-Locus-Signature` on every inbound webhook | Unconditional — no bypass path, `crypto.timingSafeEqual` with length guard |
+
+```typescript
+// Step 4 — create a Locus Checkout session per prospect
+const session = await locus.createCheckoutSession({
+  amount: run.hourlyRate,        // USDC per hour
+  currency: 'USDC',
+  metadata: { prospectId: prospect.id, runId: run.id },
+  webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/locus`,
+});
+// The returned session.url is embedded directly in the Claude-generated cold email
+prospect.checkoutUrl = session.url;
+prospect.checkoutSessionId = session.id;
+```
+
+No other payment rail in this stack could close the loop autonomously — Locus Checkout is what turns outreach into revenue without a human touching an invoice.
 
 ---
 
@@ -102,7 +131,7 @@ Each prospect moves through a strict deterministic state machine. No step is ski
 - Checks every company and contact against the **OFAC SDN (Specially Designated Nationals)** list and EU consolidated sanctions list
 - Fuzzy-match scoring: any entity scoring ≥ 75/100 confidence is hard-blocked
 - No email is ever sent to a sanctioned entity — the prospect is permanently flagged `ofac_blocked`
-- This is not a demo feature. This is real compliance infrastructure.
+- Real compliance infrastructure — not a demo stub.
 
 ### Step 4 — Locus Checkout Creation (`04-create-checkout.ts`)
 - Creates a **Locus Checkout session** for the exact hourly rate
@@ -328,7 +357,7 @@ Both `/start` and `/stream` reject `skill` strings over 120 characters before to
 
 | # | Vulnerability | Severity | Fix |
 |---|---|---|---|
-| 1 | **IP spoofing via `x-forwarded-for`** — rate limiter read the first (client-controlled) value from the header, allowing bypass by setting a fake IP | Medium | `getClientIp()` now prefers `x-real-ip` (Vercel edge-set, unspoof able); falls back to the **last** `x-forwarded-for` entry (appended by the trusted proxy) |
+| 1 | **IP spoofing via `x-forwarded-for`** — rate limiter read the first (client-controlled) value from the header, allowing bypass by setting a fake IP | Medium | `getClientIp()` now prefers `x-real-ip` (Vercel edge-set, unspoofable); falls back to the **last** `x-forwarded-for` entry (appended by the trusted proxy) |
 | 2 | **Prompt injection via `skill` field** — unsanitized user input was passed directly into Claude prompt, allowing manipulation of AI-generated email content | Medium | `sanitizeSkill()` strips all characters outside `[a-zA-Z0-9 .,+#\-()&/]` before the value reaches the LLM — applied at both `/start` and `/stream` entry points |
 
 ### Existing Strengths (Pre-Audit)
@@ -366,6 +395,8 @@ npm test
 | Webhook HMAC | Wrong-length signature → 401 | Short/truncated sig returns 401 — not 500 `RangeError` crash |
 
 ---
+
+## Getting Started
 
 ```bash
 git clone https://github.com/Gideon145/rainmaker-protocol.git
