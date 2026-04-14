@@ -21,7 +21,7 @@ interface SSEEvent {
 
 const STATUS_META: Record<string, { label: string; badge: string; icon: string; step: number; desc: string }> = {
   queued:            { label: "QUEUED",        badge: "badge-dim",    icon: "○",  step: 0, desc: "Waiting in queue" },
-  enriching:         { label: "ENRICHING",      badge: "badge-cyan",   icon: "◎",  step: 1, desc: "Fetching contact via Clado" },
+  enriching:         { label: "ENRICHING",      badge: "badge-cyan",   icon: "◎",  step: 1, desc: "Fetching contact via Hunter.io" },
   ofac_scanning:     { label: "OFAC SCAN",      badge: "badge-amber",  icon: "⚠",  step: 2, desc: "Running OFAC sanctions check" },
   ofac_blocked:      { label: "OFAC BLOCKED",   badge: "badge-red",    icon: "⛔", step: -1, desc: "Sanctioned entity — blocked" },
   generating_email:  { label: "COMPOSING",      badge: "badge-cyan",   icon: "✎",  step: 3, desc: "Claude writing outreach email" },
@@ -35,8 +35,8 @@ const STATUS_META: Record<string, { label: string; badge: string; icon: string; 
 };
 
 const PIPELINE_STEPS = [
-  { id: "scan",     label: "SCAN",    desc: "Find companies via Apollo" },
-  { id: "enrich",   label: "ENRICH",  desc: "Get contacts via Clado"    },
+  { id: "scan",     label: "SCAN",    desc: "Find companies via Tavily" },
+  { id: "enrich",   label: "ENRICH",  desc: "Get contacts via Hunter.io" },
   { id: "ofac",     label: "OFAC",    desc: "Sanctions screening"       },
   { id: "compose",  label: "COMPOSE", desc: "AI writes outreach email"  },
   { id: "checkout", label: "CHKOUT",  desc: "Create Locus checkout"     },

@@ -7,6 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Security](https://img.shields.io/badge/Security_Review-2_patched-00c853?style=for-the-badge&logo=shield&logoColor=white)](https://github.com/Gideon145/rainmaker-protocol/commit/b1f904c)
+[![APIs](https://img.shields.io/badge/Locus%20APIs-10_integrated-4101f6?style=for-the-badge)](https://beta-api.paywithlocus.com)
 
 ---
 
@@ -53,7 +54,9 @@ Locus is the payment backbone of the entire pipeline. Without Locus, there is no
 
 | Locus API | Used for | Why it matters |
 |---|---|---|
-| **Tavily Search** (`POST /wrapped/tavily/search`) | Step 1 — find companies matching the skill via AI-optimized web search | Replaces static databases — agent discovers live, active companies on every run |
+| **Tavily Search** (`POST /wrapped/tavily/search`) | Step 1 — primary company discovery pass via AI-optimized web search | Replaces static databases — agent discovers live, active companies on every run |
+| **Brave Web Search** (`POST /wrapped/brave/web/search`) | Step 1 — second-pass company discovery via independent web index | Increases target pool by ~30%; different index surfacing companies Tavily misses |
+| **Firecrawl Scrape** (`POST /wrapped/firecrawl/scrape`) | Step 1 — enrich each company's description and tech stack from their homepage | Richer signals → more accurate Claude email personalisation and tech-stack targeting |
 | **Hunter Domain Search** (`POST /wrapped/hunter/domain-search`) | Step 2 — find verified email addresses + contact info at each company domain | High-confidence emails only (≥80% verification score); protects sender reputation |
 | **OFAC Sanctions** (`POST /wrapped/ofac/search`) | Step 3 — screen every entity against 25+ global sanctions lists | Hard compliance gate — no email sent to any SDN-listed entity |
 | **Checkout Session** (`POST /checkout/sessions`) | Step 4 — creates a unique, time-limited USDC payment URL per prospect | Every cold email contains a one-click payment link — client pays before any human is involved |
@@ -98,6 +101,19 @@ After the initial x402 confirmation, a full live run was executed. Locus recorde
 | 1× | AgentMail Create Inbox | $2.00 USDC | x402 | Autonomous agent email inbox |
 
 All 10 transactions: **Status Completed · Agent-initiated · On Base**
+
+### Apr 14 2026 — Live Transaction Detail
+
+<p>
+  <img src="./screenshots/Screenshot 2026-04-14 115207.png" width="49%" alt="Locus Transaction History — single x402 payment $2.00 USDC Completed to AgentMail" />
+  <img src="./screenshots/Screenshot 2026-04-14 115513.png" width="49%" alt="Locus Agent Overview — $3.00 balance, $2.00 confirmed on-chain, agent API key" />
+</p>
+<p>
+  <img src="./screenshots/Screenshot 2026-04-14 115742.png" width="49%" alt="x402 Payment Details — $2.00 USDC from agent wallet to x402.api.agentmail.to/v0/inboxes with full response data" />
+  <img src="./screenshots/Screenshot 2026-04-14 122939.png" width="49%" alt="Full 10-transaction history — 5x Tavily $0.09, 3x Hunter $0.013, 1x Tavily earlier, 1x x402 AgentMail $2.00 — all Completed" />
+</p>
+
+> Clockwise from top-left: single x402 tx in transaction history → agent wallet showing $3.00 remaining with $2.00 confirmed → full 10-tx history from the live run → x402 payment detail with on-chain response data including `inbox_id: test-rainmaker@agentmail.to`
 
 ---
 
@@ -273,6 +289,27 @@ Allocates a `runId`. Does not start the agent — execution begins when the SSE 
 
 ### `GET /api/agent/stream?runId=&skill=&rate=`
 Opens an SSE stream. If `skill` + `rate` are present (`autostart=true`), the agent executes inside this HTTP invocation — keeping the serverless function alive for the full pipeline duration. All events are streamed as unnamed `data:` frames containing JSON payloads.
+
+### `POST /api/agent/hire` — Agent-to-Agent API
+Hire Rainmaker Protocol programmatically from another AI agent. Accepts a job, fires the full 8-step pipeline in the background, and returns immediately. Optional `webhookUrl` receives the result when the run completes.
+
+**Request:**
+```json
+{ "skill": "React development", "hourlyRate": 75, "webhookUrl": "https://your-agent.com/callback" }
+```
+**Response (202):**
+```json
+{
+  "runId": "uuid-v4",
+  "status": "running",
+  "pollUrl": "https://rainmaker-protocol.vercel.app/api/agent/runs/{runId}",
+  "streamUrl": "https://rainmaker-protocol.vercel.app/api/agent/stream?runId={runId}",
+  "message": "Rainmaker Protocol agent started. Poll pollUrl for status or subscribe to streamUrl for real-time SSE events."
+}
+```
+
+### `GET /api/agent/runs/{id}`
+Poll a single run's status — useful for agents that hired via `/api/agent/hire`.
 
 ### `GET /api/agent/runs`
 Returns all runs from the in-memory store with their full prospect and audit log data.

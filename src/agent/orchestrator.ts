@@ -50,7 +50,11 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
 
   try {
     const inbox = await mail.createInbox(`rainmaker-${runId.slice(0, 8)}`);
-    updateRun(runId, { agentInboxId: inbox.inboxId, agentEmail: inbox.email });
+    updateRun(runId, {
+      agentInboxId: inbox.inboxId,
+      agentEmail: inbox.email,
+      totalSpentUsdc: run.totalSpentUsdc + AGENTMAIL_INBOX_COST,
+    });
     run.agentInboxId = inbox.inboxId;
     run.agentEmail   = inbox.email;
 
