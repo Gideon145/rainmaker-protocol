@@ -24,8 +24,11 @@ export async function GET(req: NextRequest) {
     start(controller) {
       const send = (event: AgentEvent) => {
         try {
+          // Send as unnamed SSE data — type is in the JSON payload.
+          // Named events (event: foo\n) only fire on es.addEventListener("foo")
+          // NOT on es.onmessage, so we deliberately omit the event: prefix.
           controller.enqueue(
-            encoder.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`),
+            encoder.encode(`data: ${JSON.stringify(event)}\n\n`),
           );
         } catch { /* client disconnected */ }
       };
