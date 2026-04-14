@@ -10,6 +10,21 @@
 
 ---
 
+## Dashboard
+
+<p>
+  <img src="./screenshots/01-dashboard-idle.png" width="49%" alt="Dashboard — standby, ready to launch" />
+  <img src="./screenshots/02-how-it-works.png" width="49%" alt="Dashboard — 8-step pipeline breakdown" />
+</p>
+<p>
+  <img src="./screenshots/03-live-run.png" width="49%" alt="Live run — 11 targets, 1 OFAC block (Volkov Syndicate), 1 delivered, real-time audit log" />
+  <img src="./screenshots/04-mission-complete.png" width="49%" alt="Mission complete — $2.64 spent, $50.00 earned, 18.9x ROI" />
+</p>
+
+> Left to right: idle dashboard → 8-step pipeline view → active run with live OFAC block and audit stream → MISSION COMPLETE ($2.64 spent · $50.00 earned · **18.9x ROI**)
+
+---
+
 ## The Problem
 
 Freelancers and agencies spend **4–8 hours per week** manually searching job boards, finding contacts, writing cold emails, and chasing payments. The conversion rate for cold outreach is under 3%. The unit economics are broken: high time cost, low yield, slow payment collection.
