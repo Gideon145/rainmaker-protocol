@@ -444,7 +444,8 @@ function LaunchForm({ onStart, loading, disabled, agentEmail }: {
         </div>
       )}
 
-      {/* Mode notice */}
+      {/* Mode notice — only shown in mock mode */}
+      {process.env.NEXT_PUBLIC_USE_MOCK !== "false" && (
       <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="flex items-start gap-2">
           <span className="text-amber">⚠</span>
@@ -458,6 +459,7 @@ function LaunchForm({ onStart, loading, disabled, agentEmail }: {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
