@@ -20,11 +20,23 @@ function extractDomain(rawUrl: string): string {
 function parseCompanyFromResult(result: TavilyResult): Company | null {
   const content = result.content ?? "";
 
-  // LinkedIn company pages include a structured "Website: https://..." line
+  // Primary: structured "Website: https://..." line in LinkedIn content
   const websiteMatch = content.match(/Website:\s*(https?:\/\/[^\s\n,]+)/i);
-  if (!websiteMatch) return null;
 
-  const domain = extractDomain(websiteMatch[1]);
+  // Fallback: derive a domain from a Crunchbase URL pattern in content
+  // e.g. "Crunchbase Url: https://crunchbase.com/organization/acme" → "acme.com" (skip — not reliable)
+  // Fallback 2: use the result URL itself if it's a company homepage (not linkedin)
+  let rawDomain: string | null = null;
+
+  if (websiteMatch) {
+    rawDomain = websiteMatch[1];
+  } else if (result.url && !result.url.includes("linkedin.com") && !result.url.includes("crunchbase")) {
+    rawDomain = result.url;
+  } else {
+    return null;
+  }
+
+  const domain = extractDomain(rawDomain);
 
   // Discard non-company domains
   if (
@@ -75,8 +87,8 @@ function parseCompanyFromResult(result: TavilyResult): Company | null {
 export const tavily: CompanyProvider = {
   async searchCompanies(filters: SearchFilters): Promise<Company[]> {
     const queries = [
-      `${filters.skill} software development company startup site:linkedin.com/company`,
-      `${filters.skill} tech agency recruiting engineers site:linkedin.com/company`,
+      `${filters.skill} software development agency startup company hiring engineers`,
+      `companies that need ${filters.skill} developers outsource contractors`,
     ];
 
     const companies: Company[] = [];
