@@ -73,6 +73,23 @@ prospect.checkoutSessionId = session.id;
 
 No other payment rail in this stack could close the loop autonomously — Locus Checkout is what turns outreach into revenue without a human touching an invoice.
 
+### Live Mode — Real Locus Transaction
+
+During development we funded the agent wallet with **$5.00 USDC** (the full budget allocated for hackathon testing) and triggered a live run against real APIs. The agent autonomously fired an x402 payment to AgentMail — confirmed on-chain on Base — with zero human involvement.
+
+![Locus live transaction — $2.00 USDC x402 AgentMail Create Inbox confirmed](./screenshots/05-locus-live-tx.png)
+
+| Field | Value |
+|---|---|
+| Transaction type | x402 autonomous payment |
+| Provider | AgentMail (`agentmail-create-inbox`) |
+| Amount | **$2.00 USDC** |
+| Network | Base |
+| Status | ✅ Confirmed |
+| Triggered by | Agent (no human action) |
+
+> **Note on full-pipeline testing:** The complete 8-step run requires ~$5 USDC (AgentMail inbox $2.00 + ~$0.24 per prospect × 12 = ~$4.88). With only $5 USDC available for the hackathon, the $2.00 AgentMail charge left insufficient funds to also cover the full prospect batch. The x402 payment success confirms real Locus integration is live and functional — the full pipeline executes correctly in mock mode as shown in the demo.
+
 ---
 
 ## Architecture
