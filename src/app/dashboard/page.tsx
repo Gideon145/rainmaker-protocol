@@ -61,8 +61,8 @@ const AUDIT_COLOR: Record<string, string> = {
 };
 
 const HOW_IT_WORKS = [
-  { icon: "◉", color: "text-cyan",       title: "1 · Find Companies",   body: "Apollo API scans for B2B companies matching your skill. Returns 10–20 live prospects with industry, size, tech stack." },
-  { icon: "◎", color: "text-purple",     title: "2 · Enrich Contacts",  body: "Clado enriches each company with a real decision-maker — name, title, LinkedIn, and verified email address." },
+  { icon: "◉", color: "text-cyan",       title: "1 · Find Companies",   body: "Tavily + Brave search discovers B2B companies matching your skill. Firecrawl enriches each homepage for deeper signals." },
+  { icon: "◎", color: "text-purple",     title: "2 · Enrich Contacts",  body: "Hunter.io enriches each company with a real decision-maker — name, title, and verified email address." },
   { icon: "⚠", color: "text-amber",      title: "3 · OFAC Screening",   body: "Every entity is screened against 25+ OFAC sanctions lists. Hits are hard-blocked. Clean entities proceed automatically." },
   { icon: "✎", color: "text-cyan",       title: "4 · AI Outreach",      body: "Claude writes a hyper-personalised cold email for each prospect using their company context, your skill, and a unique checkout link." },
   { icon: "◈", color: "text-neon",       title: "5 · Locus Checkout",   body: "A USDC payment session is created via the Locus Checkout SDK. Each prospect gets a unique, time-limited payment link." },
@@ -106,7 +106,7 @@ function HeroBanner() {
         <div className="flex flex-col gap-2 shrink-0 text-right">
           <div style={{ fontSize: "0.6rem" }} className="text-sub uppercase tracking-widest">Powered by</div>
           <div className="flex flex-wrap gap-1.5 justify-end">
-            {["Locus", "AgentMail", "Apollo", "Clado", "OFAC", "Claude AI"].map((name) => (
+            {["Locus", "AgentMail", "Tavily", "Hunter.io", "Firecrawl", "Brave", "OFAC", "Claude AI"].map((name) => (
               <span key={name} className="badge badge-dim">{name}</span>
             ))}
           </div>
@@ -117,7 +117,7 @@ function HeroBanner() {
       <div className="mt-5 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         {[
           { label: "Agent Steps", value: "8",         icon: "⚡", color: "text-neon"   },
-          { label: "APIs Used",   value: "6",         icon: "◈",  color: "text-cyan"   },
+          { label: "APIs Used",   value: "10",        icon: "◈",  color: "text-cyan"   },
           { label: "Budget Cap",  value: "$5 USDC",   icon: "⚠",  color: "text-amber"  },
           { label: "Mode",        value: "MOCK · SAFE",icon: "◉",  color: "text-green-400" },
         ].map(({ label, value, icon, color }) => (
@@ -296,7 +296,7 @@ function StatsStrip({ run }: { run: Run }) {
   return (
     <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
       {[
-        { l: "Targets",    v: ps.length,               c: "text-neon",      t: "Companies found by Apollo" },
+        { l: "Targets",    v: ps.length,               c: "text-neon",      t: "Companies found by Tavily + Brave" },
         { l: "OFAC Block", v: blocked,                 c: "text-danger",    t: "Sanctioned entities blocked" },
         { l: "Payments",   v: paid,                    c: "text-green-400", t: "USDC payments received" },
         { l: "Delivered",  v: delivered,               c: "text-cyan",      t: "Work packages sent" },
@@ -841,7 +841,7 @@ export default function DashboardPage() {
                   <div className="flex flex-col items-center gap-3">
                     <span className="text-cyan text-3xl spin">◌</span>
                     <span className="text-sub text-sm tracking-widest">SCANNING FOR TARGETS…</span>
-                    <span className="text-sub" style={{ fontSize: "0.6rem" }}>Apollo is searching for B2B companies that match your skill</span>
+                    <span className="text-sub" style={{ fontSize: "0.6rem" }}>Tavily + Brave searching for B2B companies that match your skill</span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-4">
