@@ -293,8 +293,14 @@ Each run gets its own inbox (`rainmaker-{runId[0:8]}`). This enables exact reply
 **5. Budget controller before every prospect**
 The orchestrator checks `totalSpentUsdc >= BUDGET_LIMIT_USDC` before processing each company — not after. This ensures the budget cap is enforced at the earliest possible gate, preventing overspend on a long-running enrichment or Claude call.
 
-**6. Rate limiting on `/api/agent/start`**
-Max 3 run starts per IP per 5-minute window, enforced with an in-memory sliding window counter. Prevents credit exhaustion from accidental or malicious spam without requiring auth infrastructure.
+**6. Rate limiting on _both_ entry points**
+Max 3 starts per IP per 5-minute sliding window. The counter lives in a single shared module (`src/lib/rate-limit.ts`) imported by both `POST /api/agent/start` (run allocation) and `GET /api/agent/stream` (actual execution). Guarding only the allocation endpoint is insufficient — a client can call `/stream?skill=...&rate=...` directly and bypass `/start` entirely. Both gates import the same `isRateLimited(ip)` function against the same `Map`, so the limit is pool-shared regardless of which route is hit.
+
+**7. Unconditional HMAC + constant-time comparison**
+The Locus webhook route never skips signature verification. There is no `if (secret) { verify() }` opt-in branch — every inbound request is verified, full stop. The comparison uses Node's `crypto.timingSafeEqual` with an explicit length guard (`sigBuf.length !== expBuf.length`) executed before the constant-time comparison — preventing both signature forgery and the `RangeError` crash that `timingSafeEqual` throws when buffers have different lengths.
+
+**8. Input validation before any compute**
+Both `/start` and `/stream` reject `skill` strings over 120 characters before touching the rate limiter, allocating a `runId`, or spinning up the SSE stream. This prevents prompt-injection via oversized skill strings and blocks trivially cheap DoS (large string hashing on every rate-limit check).
 
 ---
 
@@ -304,15 +310,20 @@ Max 3 run starts per IP per 5-minute window, enforced with an in-memory sliding 
 npm test
 ```
 
-Covers the three critical invariants:
+10 tests covering five critical invariant categories:
 
-| Test | What it verifies |
-|---|---|
-| OFAC blocks sanctioned entity | `Volkov Syndicate LLC` → `clean: false`, score ≥ 75, list contains `SDN` |
-| OFAC passes clean company | `Acme Software Inc` → `clean: true`, zero matches |
-| Budget controller enforces $5 cap | Run at $5.00 spent → `budgetExhausted: true` |
-| Budget allows processing under cap | Fresh run → `budgetExhausted: false` |
-| `run_completed` emits full Run | Payload has `prospects[]`, `auditLog[]`, and correct `id` |
+| Suite | Test | What it verifies |
+|---|---|---|
+| OFAC provider | Blocks sanctioned entity | `Volkov Syndicate LLC` → `clean: false`, score ≥ 75, list contains `SDN` |
+| OFAC provider | Passes clean company | `Acme Software Inc` → `clean: true`, zero matches |
+| screenOFAC step | Sets blocked status | Prospect on SDN list → run status `ofac_blocked`, pipeline halted |
+| screenOFAC step | Sets clear status | Clean prospect → run status `generating_email`, pipeline continues |
+| Budget controller | Enforces $5 cap | Run at $5.00 spent → `budgetExhausted: true` |
+| Budget controller | Allows processing under cap | Fresh run → `budgetExhausted: false` |
+| EventBus payload | `run_completed` emits full `Run` | Payload has `prospects[]`, `auditLog[]`, correct `id` — not a stub |
+| Webhook HMAC | Unknown session → 401 | `checkoutSessionId` with no matching run returns 401 (no bypass) |
+| Webhook HMAC | Tampered signature → 401 | Correct-length but wrong-value sig returns 401 (not 200) |
+| Webhook HMAC | Wrong-length signature → 401 | Short/truncated sig returns 401 — not 500 `RangeError` crash |
 
 ---
 
@@ -395,7 +406,7 @@ src/
 │       ├── 05-generate-email.ts  # Claude AI email generation
 │       ├── 06-send-outreach.ts   # AgentMail email dispatch
 │       ├── 07-poll-replies.ts    # Payment polling + webhook handler
-│       └── 07-deliver-work.ts    # Automated work delivery
+│       └── 08-deliver-work.ts    # Automated work delivery on payment confirmed
 ├── app/
 │   ├── api/
 │   │   ├── agent/start/          # Run allocation endpoint
