@@ -9,10 +9,9 @@ import { deliverWork } from "./08-deliver-work";
 const POLL_INTERVAL_MS = 8_000;
 const POLL_TIMEOUT_MS  = 10 * 60 * 1000; // 10 min max
 
-// ─── Tracks seen message IDs to avoid double-processing ───────────────────
-const seenMessages = new Set<string>();
-
 export async function pollForReplies(runId: string): Promise<void> {
+  // Scoped per-call — no cross-run contamination, no module-level memory leak
+  const seenMessages = new Set<string>();
   const run = getRun(runId);
   if (!run?.agentInboxId) return;
 

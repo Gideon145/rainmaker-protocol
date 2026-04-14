@@ -48,7 +48,7 @@ export async function runAgent(params: StartRunParams): Promise<string> {
 }
 
 export async function executeRun(runId: string, params: StartRunParams): Promise<void> {
-  const run = (await import("@/lib/store")).getRun(runId)!;
+  const run = getRun(runId)!;
 
   // ── Step 0: Create AgentMail inbox ──────────────────────────────────────
   eventBus.emit(runId, "run_started", run);

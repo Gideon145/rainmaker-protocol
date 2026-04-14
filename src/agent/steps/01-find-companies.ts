@@ -1,5 +1,5 @@
 import { companies } from "@/lib/providers";
-import { addAuditEntry, updateRun } from "@/lib/store";
+import { addAuditEntry } from "@/lib/store";
 import { uuid, nowIso } from "@/lib/utils";
 import { eventBus } from "@/agent/events";
 import type { Run, Company } from "@/lib/providers/types";
@@ -12,8 +12,6 @@ export async function findCompanies(run: Run): Promise<Company[]> {
   });
 
   const results = await companies.searchCompanies({ skill: run.skill });
-
-  updateRun(run.id, {}); // trigger persist
 
   addAuditEntry(run.id, {
     id: uuid(),

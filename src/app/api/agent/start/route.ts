@@ -20,6 +20,9 @@ export async function POST(req: NextRequest) {
     if (!skill) {
       return NextResponse.json({ error: "skill is required" }, { status: 400 });
     }
+    if (skill.length > 120) {
+      return NextResponse.json({ error: "skill must be 120 characters or fewer" }, { status: 400 });
+    }
     return NextResponse.json({ runId: uuid(), skill, hourlyRate });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
