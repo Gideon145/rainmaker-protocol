@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { getWebhookSecret, getProspectBySession, getRun, updateRun } from "@/lib/store";
+import { getWebhookSecret, getProspectBySession, getRun, getAllRuns, updateRun } from "@/lib/store";
 import { handlePaymentConfirmed } from "@/agent/steps/07-poll-replies";
 
 export async function POST(req: NextRequest) {
@@ -59,7 +59,6 @@ export async function POST(req: NextRequest) {
 
   if (!runId || !prospectId) {
     // Fall back to scanning all runs for this sessionId
-    const { getAllRuns } = await import("@/lib/store");
     for (const run of getAllRuns()) {
       const prospect = getProspectBySession(run.id, sessionId);
       if (prospect) {

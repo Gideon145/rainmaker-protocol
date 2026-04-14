@@ -17,6 +17,13 @@ export async function GET(req: NextRequest) {
   const autostart  = !!(skill && rateStr);
   const hourlyRate = autostart ? Math.max(10, Math.min(500, Number(rateStr) || 50)) : 0;
 
+  if (autostart && skill && skill.length > 120) {
+    return NextResponse.json(
+      { error: "skill must be 120 characters or fewer" },
+      { status: 400 },
+    );
+  }
+
   // Rate-limit the autostart path — the real execution entry point.
   // Guarding only /start was bypassable by calling /stream directly with skill+rate.
   if (autostart) {

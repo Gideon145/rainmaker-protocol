@@ -140,3 +140,83 @@ describe("EventBus run_completed payload", () => {
     expect(p.id).toBe(runId);
   });
 });
+
+// ─── 5. Webhook HMAC verification ────────────────────────────────────────
+// The money path — must reject bad/missing signatures and unknown sessions.
+
+describe("Webhook HMAC verification", () => {
+  async function makeSignedRequest(body: object, secret: string, opts: { tamper?: boolean; wrongLength?: boolean } = {}) {
+    const { storeWebhookSecret, createRun } = await import("@/lib/store");
+    const crypto = await import("crypto");
+
+    const rawBody = JSON.stringify(body);
+    const hmac = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+    let signature = `sha256=${hmac}`;
+
+    if (opts.tamper) signature = `sha256=${"00".repeat(32)}`; // valid length, bad value
+    if (opts.wrongLength) signature = "sha256=short";
+
+    return { rawBody, signature };
+  }
+
+  it("returns 401 for an unknown sessionId (no secret stored)", async () => {
+    const { POST } = await import("@/app/api/webhooks/locus/route");
+    const { NextRequest } = await import("next/server");
+
+    const body = { event: "checkout.session.paid", data: { sessionId: "unknown-sess-" + Date.now(), amount: "50" }, timestamp: new Date().toISOString() };
+    const req = new NextRequest("http://localhost/api/webhooks/locus", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json", "x-signature-256": "sha256=abc" },
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json.error).toBe("unknown session");
+  });
+
+  it("returns 401 for a tampered signature (wrong HMAC, correct length)", async () => {
+    const { storeWebhookSecret } = await import("@/lib/store");
+    const { POST } = await import("@/app/api/webhooks/locus/route");
+    const { NextRequest } = await import("next/server");
+
+    const sessionId = "tamper-sess-" + Date.now();
+    const secret = "test-webhook-secret-tamper";
+    storeWebhookSecret(sessionId, secret);
+
+    const body = { event: "checkout.session.paid", data: { sessionId, amount: "50" }, timestamp: new Date().toISOString() };
+    const { rawBody } = await makeSignedRequest(body, secret);
+
+    const req = new NextRequest("http://localhost/api/webhooks/locus", {
+      method: "POST",
+      body: rawBody,
+      headers: { "Content-Type": "application/json", "x-signature-256": `sha256=${"ff".repeat(32)}` },
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+    const json = await res.json();
+    expect(json.error).toBe("invalid signature");
+  });
+
+  it("returns 401 for a wrong-length signature (would crash timingSafeEqual)", async () => {
+    const { storeWebhookSecret } = await import("@/lib/store");
+    const { POST } = await import("@/app/api/webhooks/locus/route");
+    const { NextRequest } = await import("next/server");
+
+    const sessionId = "wronglen-sess-" + Date.now();
+    storeWebhookSecret(sessionId, "test-secret-len");
+
+    const body = { event: "checkout.session.paid", data: { sessionId, amount: "50" }, timestamp: new Date().toISOString() };
+
+    const req = new NextRequest("http://localhost/api/webhooks/locus", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json", "x-signature-256": "sha256=tooshort" },
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(401); // must not throw 500
+  });
+});

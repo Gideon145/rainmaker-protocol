@@ -30,23 +30,6 @@ export interface StartRunParams {
   hourlyRate: number;
 }
 
-/**
- * runAgent — fire-and-forget. Called without await from the API route.
- * Emits SSE events throughout execution.
- */
-export async function runAgent(params: StartRunParams): Promise<string> {
-  const runId = uuid();
-  const run = createRun({ id: runId, skill: params.skill, hourlyRate: params.hourlyRate });
-
-  // Kick off async — no await
-  executeRun(runId, params).catch((err) => {
-    finishRun(runId, "failed", String(err));
-    eventBus.emit(runId, "run_failed", { error: String(err) });
-  });
-
-  return runId;
-}
-
 export async function executeRun(runId: string, params: StartRunParams): Promise<void> {
   const run = getRun(runId)!;
 

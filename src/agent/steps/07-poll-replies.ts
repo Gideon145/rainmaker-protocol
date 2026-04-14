@@ -1,6 +1,5 @@
 import { mail } from "@/lib/providers";
 import { USE_MOCK } from "@/lib/providers";
-import { agentMailBus } from "@/lib/providers/mock/agentmail";
 import { getRun, getProspect, upsertProspect, addAuditEntry, updateRun } from "@/lib/store";
 import { uuid, nowIso, sleep } from "@/lib/utils";
 import { eventBus } from "@/agent/events";
