@@ -17,7 +17,7 @@ const CONTACTS: Record<string, Omit<Contact, "email" | "emailReputation">> = {
 
 export const clado: ContactProvider = {
   async enrichContact(company: Company): Promise<Contact | null> {
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 60));
     const base = CONTACTS[company.domain];
     if (!base) return null;
     return {

@@ -20,7 +20,7 @@ export async function createCheckout(prospect: Prospect, run: Run): Promise<Pros
     // Mock: generate a fake session
     sessionId = `sess_mock_${uuid().replace(/-/g, "").slice(0, 20)}`;
     checkoutUrl = `https://checkout.paywithlocus.com/${sessionId}`;
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 50));
   } else {
     const result = await createCheckoutSession({
       amount: run.hourlyRate.toFixed(2),

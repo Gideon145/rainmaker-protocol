@@ -4,8 +4,6 @@ import { getRun, createRun } from "@/lib/store";
 import { executeRun } from "@/agent/orchestrator";
 import type { AgentEvent } from "@/lib/providers/types";
 
-// Tells Vercel to keep this function alive for up to 60 seconds
-export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {

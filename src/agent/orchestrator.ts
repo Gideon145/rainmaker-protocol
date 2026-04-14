@@ -175,7 +175,7 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
     eventBus.emit(runId, "prospect_update", prospect);
 
     // Small delay between prospects for visual drama in demo
-    await sleep(400);
+    await sleep(80);
 
     try {
       // 1. Enrich contact

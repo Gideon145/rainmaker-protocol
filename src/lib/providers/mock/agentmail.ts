@@ -24,7 +24,7 @@ export const agentMailBus = new EventEmitter();
 
 export const agentmail: MailProvider = {
   async createInbox(username: string) {
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 100));
     // Reset per-run so every new run gets an auto-reply
     firstPayTarget.inboxId = null;
     firstPayTarget.messageId = null;
@@ -36,7 +36,7 @@ export const agentmail: MailProvider = {
   },
 
   async sendEmail({ inboxId, to, subject }) {
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 60));
     const messageId = `mock_msg_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
     // Schedule an auto-reply from the FIRST prospect only (to demo payment flow)
@@ -64,12 +64,12 @@ export const agentmail: MailProvider = {
   },
 
   async listMessages(inboxId: string) {
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 30));
     return messages.get(inboxId) ?? [];
   },
 
   async reply({ inboxId, messageId: _msgId, body: _body }) {
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 30));
     // no-op in mock — delivery is considered done
   },
 };

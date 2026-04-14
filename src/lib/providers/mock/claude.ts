@@ -46,7 +46,7 @@ Rainmaker Agent`,
 
 export const claude: LLMProvider = {
   async generateOutreach({ skill, hourlyRate, company, contact, checkoutUrl }) {
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 80));
 
     const subjectTemplate =
       SUBJECT_TEMPLATES[Math.floor(Math.random() * SUBJECT_TEMPLATES.length)];
@@ -67,7 +67,7 @@ export const claude: LLMProvider = {
   },
 
   async generateDeliverable({ skill, company, contact }) {
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 60));
     return `Hi ${contact.firstName},
 
 Thank you for booking a session! Here's your pre-session work package:

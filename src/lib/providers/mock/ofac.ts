@@ -17,7 +17,7 @@ const OFAC_HITS: Record<string, OFACResult> = {
 
 export const ofac: ComplianceProvider = {
   async screenOFAC(entityName: string): Promise<OFACResult> {
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 50));
     return OFAC_HITS[entityName] ?? { clean: true, matches: [] };
   },
 };

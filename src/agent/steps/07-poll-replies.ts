@@ -21,7 +21,7 @@ export async function pollForReplies(runId: string): Promise<void> {
 
   // In mock mode — simulate payment directly after pipeline settles (no race condition)
   if (USE_MOCK) {
-    await sleep(6_000); // wait for all outreach emails to be sent
+    await sleep(800); // short pause then simulate payment
     const currentRun = getRun(runId);
     const prospect = currentRun?.prospects.find(
       (p) => p.status === "awaiting_payment" || p.status === "outreach_sent",

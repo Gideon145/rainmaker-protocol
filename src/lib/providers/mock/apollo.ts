@@ -109,7 +109,7 @@ const SEED_COMPANIES: Omit<Company, "id">[] = [
 
 export const apollo: CompanyProvider = {
   async searchCompanies(_filters: SearchFilters): Promise<Company[]> {
-    await new Promise((r) => setTimeout(r, 800)); // simulate network
+    await new Promise((r) => setTimeout(r, 80)); // simulate network
     return SEED_COMPANIES.map((c) => ({ ...c, id: uuid() }));
   },
 };
