@@ -25,8 +25,6 @@ Freelancers and agencies spend **4–8 hours per week** manually searching job b
 | Cost per company processed | ~$0.24 USDC (enrichment + email + checkout) |
 | AgentMail inbox (one-time per run) | $2.00 USDC |
 | Companies reachable per $5 budget | 11–12 |
-| Simulated earnings on first payment | $50.00 USDC (1-hour session @ $50/hr) |
-| **ROI on agent spend** | **~18.9×** |
 | Pipeline execution time (mock) | < 5 seconds end-to-end |
 | Pipeline execution time (real APIs) | ~30–60 seconds |
 
