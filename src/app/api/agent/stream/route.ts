@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { eventBus } from "@/agent/events";
 import { getRun, createRun } from "@/lib/store";
 import { executeRun } from "@/agent/orchestrator";
-import { isRateLimited } from "@/lib/rate-limit";
+import { isRateLimited, getClientIp } from "@/lib/rate-limit";
+
+// Strip prompt-injection characters from skill before passing to agent
+function sanitizeSkill(input: string): string {
+  return input.replace(/[^\w\s.,+#\-()&/]/g, "").trim();
+}
 import type { AgentEvent } from "@/lib/providers/types";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +21,7 @@ export async function GET(req: NextRequest) {
 
   const autostart  = !!(skill && rateStr);
   const hourlyRate = autostart ? Math.max(10, Math.min(500, Number(rateStr) || 50)) : 0;
+  const sanitizedSkill = skill ? sanitizeSkill(skill) : skill;
 
   if (autostart && skill && skill.length > 120) {
     return NextResponse.json(
@@ -27,7 +33,7 @@ export async function GET(req: NextRequest) {
   // Rate-limit the autostart path — the real execution entry point.
   // Guarding only /start was bypassable by calling /stream directly with skill+rate.
   if (autostart) {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const ip = getClientIp(req);
     if (isRateLimited(ip)) {
       return NextResponse.json(
         { error: "Rate limit exceeded — max 3 runs per 5 minutes" },
@@ -76,9 +82,9 @@ export async function GET(req: NextRequest) {
         // ── NEW: run the agent IN THIS same invocation ──────────────────────
         // The open SSE stream keeps Vercel alive; fire-and-forget from /start
         // was being killed the moment the HTTP response was sent.
-        createRun({ id: runId, skill: skill!, hourlyRate });
+        createRun({ id: runId, skill: sanitizedSkill!, hourlyRate });
 
-        void executeRun(runId, { skill: skill!, hourlyRate }).catch((err) => {
+        void executeRun(runId, { skill: sanitizedSkill!, hourlyRate }).catch((err) => {
           send({
             type: "run_failed",
             runId,

@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uuid } from "@/lib/utils";
-import { isRateLimited } from "@/lib/rate-limit";
+import { isRateLimited, getClientIp } from "@/lib/rate-limit";
+
+// Strip characters that could be used for prompt injection in LLM calls.
+// Allows letters, numbers, spaces, and common punctuation — blocks control
+// characters, angle brackets, backticks, and newlines.
+function sanitizeSkill(input: string): string {
+  return input.replace(/[^\w\s.,+#\-()&/]/g, "").trim();
+}
 
 // Just generate a runId — the agent starts from the SSE stream route
 // so it runs in the same long-lived invocation and Vercel can't kill it
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const ip = getClientIp(req);
     if (isRateLimited(ip)) {
       return NextResponse.json(
         { error: "Rate limit exceeded — max 3 runs per 5 minutes" },
@@ -15,7 +22,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const skill: string = (body.skill ?? "React Developer").trim();
+    const rawSkill: string = (body.skill ?? "React Developer").trim();
+    const skill: string = sanitizeSkill(rawSkill);
     const hourlyRate: number = Math.max(10, Math.min(500, Number(body.hourlyRate) || 100));
     if (!skill) {
       return NextResponse.json({ error: "skill is required" }, { status: 400 });
