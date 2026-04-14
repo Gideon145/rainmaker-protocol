@@ -4,7 +4,7 @@ import { agentMailBus } from "@/lib/providers/mock/agentmail";
 import { getRun, getProspect, upsertProspect, addAuditEntry, updateRun } from "@/lib/store";
 import { uuid, nowIso, sleep } from "@/lib/utils";
 import { eventBus } from "@/agent/events";
-import { deliverWork } from "./07-deliver-work";
+import { deliverWork } from "./08-deliver-work";
 
 const POLL_INTERVAL_MS = 8_000;
 const POLL_TIMEOUT_MS  = 10 * 60 * 1000; // 10 min max

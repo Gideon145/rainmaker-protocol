@@ -51,7 +51,7 @@ export async function deliverWork(prospect: Prospect, run: Run): Promise<void> {
     prospectId: prospect.id,
     timestamp: nowIso(),
     action: `📦 WORK DELIVERED — ${prospect.company.name}`,
-    reasoning: `Session confirmation package delivered to ${prospect.contact.firstName} ${prospect.contact.lastName} via AgentMail reply. Includes agenda, calendar link, and pre-session brief. Full cycle complete: prospect → OFAC → outreach → payment → delivery. Zero human intervention.`,
+    reasoning: `AI-generated session brief delivered to ${prospect.contact.firstName} ${prospect.contact.lastName} via AgentMail reply. Includes personalised agenda and pre-session context tailored to the company. Full cycle complete: prospect → OFAC → outreach → payment → delivery. Zero human intervention.`,
     cost: 0.01,
     txHash: null,
     status: "success",

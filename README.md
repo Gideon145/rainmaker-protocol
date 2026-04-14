@@ -112,8 +112,9 @@ Each prospect moves through a strict deterministic state machine. No step is ski
 - Hard timeout: 10 minutes — run auto-completes and is archived
 - Also handles **Locus webhook** (`/api/webhooks/locus`) for real-time payment events
 
-### Step 8 — Automated Work Delivery (`07-deliver-work.ts`)
-- On payment confirmation: generates and sends a professional work deliverable via AgentMail
+### Step 8 — Automated Work Delivery (`08-deliver-work.ts`)
+- On payment confirmation: calls Claude to generate a personalised session brief (agenda, scope, pre-work questions tailored to the company's tech stack)
+- Sends it via AgentMail as a reply to the original outreach thread
 - Updates `totalEarnedUsdc` on the run, marks prospect `delivered`
 - Emits `work_delivered` SSE event to the dashboard in real time
 
@@ -292,9 +293,28 @@ Each run gets its own inbox (`rainmaker-{runId[0:8]}`). This enables exact reply
 **5. Budget controller before every prospect**
 The orchestrator checks `totalSpentUsdc >= BUDGET_LIMIT_USDC` before processing each company — not after. This ensures the budget cap is enforced at the earliest possible gate, preventing overspend on a long-running enrichment or Claude call.
 
+**6. Rate limiting on `/api/agent/start`**
+Max 3 run starts per IP per 5-minute window, enforced with an in-memory sliding window counter. Prevents credit exhaustion from accidental or malicious spam without requiring auth infrastructure.
+
 ---
 
-## Running Locally
+## Tests
+
+```bash
+npm test
+```
+
+Covers the three critical invariants:
+
+| Test | What it verifies |
+|---|---|
+| OFAC blocks sanctioned entity | `Volkov Syndicate LLC` → `clean: false`, score ≥ 75, list contains `SDN` |
+| OFAC passes clean company | `Acme Software Inc` → `clean: true`, zero matches |
+| Budget controller enforces $5 cap | Run at $5.00 spent → `budgetExhausted: true` |
+| Budget allows processing under cap | Fresh run → `budgetExhausted: false` |
+| `run_completed` emits full Run | Payload has `prospects[]`, `auditLog[]`, and correct `id` |
+
+---
 
 ```bash
 git clone https://github.com/Gideon145/rainmaker-protocol.git
