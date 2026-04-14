@@ -107,7 +107,7 @@ function HeroBanner() {
           <div style={{ fontSize: "0.6rem" }} className="text-sub uppercase tracking-widest">Powered by</div>
           <div className="flex flex-wrap gap-1.5 justify-end">
             {["Locus", "AgentMail", "Apollo", "Clado", "OFAC", "Claude AI"].map((name) => (
-              <span key={name} className="badge" style={{ borderColor: "rgba(0,255,159,0.3)", color: "var(--accent-green)", background: "rgba(0,255,159,0.06)", fontWeight: 600 }}>{name}</span>
+              <span key={name} className="badge badge-dim">{name}</span>
             ))}
           </div>
         </div>
@@ -539,11 +539,19 @@ function ProspectCard({ p }: { p: Prospect }) {
 
       {/* Checkout CTA */}
       {p.checkoutUrl && p.status === "awaiting_payment" && (
-        <a href={p.checkoutUrl} target="_blank" rel="noopener noreferrer"
-          className="text-neon text-center font-bold"
-          style={{ fontSize: "0.65rem", border: "1px solid rgba(0,255,159,0.35)", padding: "0.5rem", borderRadius: "2px", display: "block", background: "rgba(0,255,159,0.04)" }}>
-          ◈ OPEN LOCUS CHECKOUT →
-        </a>
+        p.checkoutUrl.includes("sess_mock_") ? (
+          <div className="text-center font-bold"
+            style={{ fontSize: "0.65rem", border: "1px solid rgba(255,255,255,0.1)", padding: "0.5rem", borderRadius: "2px", display: "block", background: "rgba(255,255,255,0.02)", color: "rgba(255,255,255,0.25)", cursor: "default" }}
+            title="Mock session — real checkout active in production with USE_MOCK=false">
+            ◈ MOCK SESSION (live in prod)
+          </div>
+        ) : (
+          <a href={p.checkoutUrl} target="_blank" rel="noopener noreferrer"
+            className="text-neon text-center font-bold"
+            style={{ fontSize: "0.65rem", border: "1px solid rgba(0,255,159,0.35)", padding: "0.5rem", borderRadius: "2px", display: "block", background: "rgba(0,255,159,0.04)" }}>
+            ◈ OPEN LOCUS CHECKOUT →
+          </a>
+        )
       )}
 
       {/* Payment */}
