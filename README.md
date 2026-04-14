@@ -77,7 +77,10 @@ No other payment rail in this stack could close the loop autonomously — Locus 
 
 During development we funded the agent wallet with **$5.00 USDC** (the full budget allocated for hackathon testing) and triggered a live run against real APIs. The agent autonomously fired an x402 payment to AgentMail — confirmed on-chain on Base — with zero human involvement.
 
-![Locus live transaction — $2.00 USDC x402 AgentMail Create Inbox confirmed](./screenshots/05-locus-live-tx.png)
+<p>
+  <img src="./screenshots/05-locus-live-tx.png" width="49%" alt="Locus Transaction History — x402 payment 2.00 USDC Completed" />
+  <img src="./screenshots/06-locus-tx-details.png" width="49%" alt="x402 Payment Details — $2.00 USDC to AgentMail inbox endpoint with response data" />
+</p>
 
 | Field | Value |
 |---|---|
