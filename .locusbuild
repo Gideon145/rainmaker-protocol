@@ -1,0 +1,9 @@
+services:
+  - name: rainmaker-protocol
+    runtime:
+      port: 8080
+      cpu: 512
+      memory: 1024
+      minInstances: 1
+      maxInstances: 1
+    healthCheckPath: /api/health

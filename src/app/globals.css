@@ -1,5 +1,203 @@
 @import "tailwindcss";
 
+/* ── RAINMAKER PROTOCOL — Sci-Fi Theme ─────────────────────────────────── */
+
+:root {
+  --bg-deep:        #030308;
+  --bg-card:        #07070f;
+  --bg-card-hover:  #0d0d1a;
+  --accent-green:   #00ff9f;
+  --accent-cyan:    #00e5ff;
+  --accent-amber:   #ff9500;
+  --accent-red:     #ff2d55;
+  --accent-purple:  #bf5af2;
+  --text-primary:   #e0e0ff;
+  --text-muted:     #4a4a7a;
+  --border-glow:    rgba(0, 255, 159, 0.25);
+  --border-dim:     rgba(0, 229, 255, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbars ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 2px; }
+
+/* ── Star grid background ─────────────────────────────────────────────── */
+.star-grid {
+  background-image:
+    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Scan-line overlay ────────────────────────────────────────────────── */
+.scanlines::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Glow card ────────────────────────────────────────────────────────── */
+.glow-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.glow-card:hover {
+  border-color: var(--border-glow);
+  box-shadow: 0 0 20px rgba(0,255,159,0.06);
+}
+
+/* ── Neon text ────────────────────────────────────────────────────────── */
+.text-neon-green { color: var(--accent-green); }
+.text-neon-cyan  { color: var(--accent-cyan);  }
+.text-neon-amber { color: var(--accent-amber); }
+.text-neon-red   { color: var(--accent-red);   }
+.text-neon-purple{ color: var(--accent-purple);}
+
+/* ── Glitch text animation ────────────────────────────────────────────── */
+@keyframes glitch {
+  0%, 100% { transform: translate(0); clip-path: none; }
+  10% { transform: translate(-2px, 1px); clip-path: polygon(0 20%, 100% 20%, 100% 40%, 0 40%); }
+  20% { transform: translate(2px, -1px); clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%); }
+  30% { transform: translate(0); clip-path: none; }
+}
+.glitch:hover { animation: glitch 0.4s steps(1) infinite; }
+
+/* ── Pulse dot ────────────────────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.8); }
+}
+.pulse-dot { animation: pulse-dot 1.2s ease-in-out infinite; }
+
+/* ── Slide-in row ─────────────────────────────────────────────────────── */
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.slide-in { animation: slide-in 0.25s ease-out forwards; }
+
+/* ── Blink cursor ─────────────────────────────────────────────────────── */
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.blink-cursor::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+  font-size: 0.7em;
+  color: var(--accent-green);
+}
+
+/* ── Status badge ─────────────────────────────────────────────────────── */
+.badge-green  { background: rgba(0,255,159,0.1);  color: var(--accent-green); border: 1px solid rgba(0,255,159,0.3);  }
+.badge-cyan   { background: rgba(0,229,255,0.1);  color: var(--accent-cyan);  border: 1px solid rgba(0,229,255,0.3);  }
+.badge-amber  { background: rgba(255,149,0,0.1);  color: var(--accent-amber); border: 1px solid rgba(255,149,0,0.3);  }
+.badge-red    { background: rgba(255,45,85,0.1);  color: var(--accent-red);   border: 1px solid rgba(255,45,85,0.3);  }
+.badge-purple { background: rgba(191,90,242,0.1); color: var(--accent-purple);border: 1px solid rgba(191,90,242,0.3); }
+.badge-dim    { background: rgba(74,74,122,0.2);  color: var(--text-muted);   border: 1px solid rgba(74,74,122,0.3);  }
+
+/* ── Neon button ──────────────────────────────────────────────────────── */
+.btn-neon {
+  background: transparent;
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.5rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.btn-neon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent-green);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s;
+  z-index: -1;
+}
+.btn-neon:hover {
+  color: var(--bg-deep);
+  box-shadow: 0 0 20px rgba(0,255,159,0.4);
+}
+.btn-neon:hover::before { transform: scaleX(1); }
+.btn-neon:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.btn-neon:disabled::before { transform: scaleX(0); }
+
+/* ── Input ────────────────────────────────────────────────────────────── */
+.input-neon {
+  background: rgba(0,229,255,0.04);
+  border: 1px solid var(--border-dim);
+  border-radius: 2px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+.input-neon:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(0,229,255,0.15);
+}
+.input-neon::placeholder { color: var(--text-muted); }
+
+/* ── Divider ──────────────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-glow), transparent);
+  margin: 0.75rem 0;
+}
+
+/* ── ROI counter glow ─────────────────────────────────────────────────── */
+@keyframes roi-pulse {
+  0%, 100% { text-shadow: 0 0 10px var(--accent-green); }
+  50%       { text-shadow: 0 0 30px var(--accent-green), 0 0 60px rgba(0,255,159,0.4); }
+}
+.roi-glow { animation: roi-pulse 2s ease-in-out infinite; }
+
+/* ── Terminal log ─────────────────────────────────────────────────────── */
+.terminal-log {
+  background: #020209;
+  border: 1px solid rgba(0,229,255,0.08);
+  border-radius: 2px;
+  font-size: 0.7rem;
+  line-height: 1.6;
+  overflow-y: auto;
+  max-height: 280px;
+  padding: 0.75rem;
+}
+.terminal-log::-webkit-scrollbar { width: 3px; }
+.terminal-log::-webkit-scrollbar-thumb { background: rgba(0,255,159,0.2); }
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
