@@ -53,10 +53,14 @@ Locus is the payment backbone of the entire pipeline. Without Locus, there is no
 
 | Locus API | Used for | Why it matters |
 |---|---|---|
-| **Checkout Session** (`POST /checkout/sessions`) | Creates a unique, time-limited USDC payment URL per prospect | Every cold email contains a one-click payment link — client pays before any human is involved |
-| **Session Status** (`GET /checkout/sessions/:id`) | Polling to detect `PAID` status during the 10-minute wait window | Agent confirms payment on-chain before triggering work delivery |
+| **Tavily Search** (`POST /wrapped/tavily/search`) | Step 1 — find companies matching the skill via AI-optimized web search | Replaces static databases — agent discovers live, active companies on every run |
+| **Hunter Domain Search** (`POST /wrapped/hunter/domain-search`) | Step 2 — find verified email addresses + contact info at each company domain | High-confidence emails only (≥80% verification score); protects sender reputation |
+| **OFAC Sanctions** (`POST /wrapped/ofac/search`) | Step 3 — screen every entity against 25+ global sanctions lists | Hard compliance gate — no email sent to any SDN-listed entity |
+| **Checkout Session** (`POST /checkout/sessions`) | Step 4 — creates a unique, time-limited USDC payment URL per prospect | Every cold email contains a one-click payment link — client pays before any human is involved |
+| **Session Status** (`GET /checkout/sessions/:id`) | Step 7 — polling to detect `PAID` status during the 10-minute wait window | Agent confirms payment on-chain before triggering work delivery |
 | **Webhook** (`POST /api/webhooks/locus`) | Real-time `CHECKOUT_PAID` event push | Instant delivery trigger — no polling lag when webhook fires |
 | **HMAC Verification** | `X-Locus-Signature` on every inbound webhook | Unconditional — no bypass path, `crypto.timingSafeEqual` with length guard |
+| **AgentMail x402** (`POST /api/x402/agentmail-create-inbox`) | Step 6 — autonomous agent email inbox creation | x402 HTTP-native payment — **confirmed $2.00 USDC on-chain, Apr 14 2026** |
 
 ```typescript
 // Step 4 — create a Locus Checkout session per prospect
@@ -111,7 +115,7 @@ During development we funded the agent wallet with **$5.00 USDC** (the full budg
 │  │  STEP 1  │→ │  STEP 2  │→ │  STEP 3  │→ │  STEP 4  │       │
 │  │  Find    │  │  Enrich  │  │   OFAC   │  │ Checkout │       │
 │  │Companies │  │ Contact  │  │ Screening│  │  Create  │       │
-│  │ (Apollo) │  │ (Clado)  │  │          │  │ (Locus)  │       │
+│  │(Tavily)  │  │(Hunter)  │  │          │  │ (Locus)  │       │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │
 │                                                                 │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
@@ -137,15 +141,16 @@ During development we funded the agent wallet with **$5.00 USDC** (the full budg
 Each prospect moves through a strict deterministic state machine. No step is skipped. Every decision is logged with cost and reasoning.
 
 ### Step 1 — Company Discovery (`01-find-companies.ts`)
-- Calls **Apollo.io API** with your skill as the search vector
-- Returns companies actively hiring contractors matching the skill profile
-- Includes tech stack, company size, industry, location, and hiring signals
-- Produces 10–12 qualified targets per run
+- Calls **Tavily AI Search API** (via Locus) with your skill as the search vector
+- Queries LinkedIn company profiles for startups and agencies matching the skill profile
+- Extracts tech stack, company size, industry, website domain from structured results
+- Deduplicates by domain across two targeted query passes — produces 10–12 qualified targets per run
 
 ### Step 2 — Contact Enrichment (`02-enrich-contact.ts`)
-- Calls **Clado API** to find the decision-maker (CTO, VP Eng, Lead Dev)
-- Returns name, title, LinkedIn URL, email address, and email reputation score
-- Email reputation check (`valid` / `risky` / `invalid`) gates the pipeline — risky emails are skipped to protect sender reputation
+- Calls **Hunter.io API** (via Locus) to find the decision-maker (CTO, VP Eng, Lead Dev)
+- Returns name, title, LinkedIn URL, verified email address, and confidence score
+- Prioritises engineering/IT department contacts with senior/executive seniority
+- Falls back to any named contact if no engineering contacts found
 
 ### Step 3 — OFAC Sanctions Screening (`03-screen-ofac.ts`)
 - Checks every company and contact against the **OFAC SDN (Specially Designated Nationals)** list and EU consolidated sanctions list
@@ -222,7 +227,7 @@ RAINMAKER Protocol is built with **financial compliance as a first-class constra
 | Control | Implementation |
 |---|---|
 | OFAC SDN screening | Fuzzy-match against SDN + EU lists, ≥75 confidence = hard block |
-| Email reputation gate | Clado reputation check — `invalid` emails never contacted |
+| Email reputation gate | Hunter confidence score — low-confidence emails skipped to protect sender reputation |
 | Budget hard cap | $5.00 USDC — orchestrator halts the pipeline on breach |
 | Checkout session isolation | One session per prospect — prevents double-payment |
 | Webhook idempotency | `paymentTxHash` uniqueness check before triggering delivery |
@@ -331,8 +336,8 @@ interface AuditEntry {
 | Styling | Tailwind CSS + custom CSS vars | Terminal-aesthetic dark UI |
 | Payment | **Locus Checkout API** | USDC payment sessions + webhooks |
 | Email | **AgentMail API** | Agent-native send/receive inbox |
-| Company data | **Apollo.io API** | B2B company + contact discovery |
-| Contact enrichment | **Clado API** | LinkedIn-based contact data |
+| Company data | **Tavily AI Search** (via Locus) | AI-optimized company discovery |
+| Contact enrichment | **Hunter.io** (via Locus) | Email finding + verification |
 | AI generation | **Anthropic Claude** | Personalised email writing |
 | Sanctions | OFAC SDN + EU lists | Compliance screening |
 | Streaming | Server-Sent Events (SSE) | Real-time dashboard updates |
@@ -435,9 +440,7 @@ LOCUS_API_BASE=https://beta-api.paywithlocus.com/api
 USE_MOCK=true
 
 # Required when USE_MOCK=false
-APOLLO_API_KEY=
 AGENTMAIL_API_KEY=
-CLADO_API_KEY=
 ANTHROPIC_API_KEY=
 
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -474,7 +477,7 @@ NEXT_PUBLIC_APP_URL
 
 To switch from mock to live mode:
 
-1. Add real API keys to Vercel env vars: `APOLLO_API_KEY`, `AGENTMAIL_API_KEY`, `CLADO_API_KEY`, `ANTHROPIC_API_KEY`
+1. Add real API keys to Vercel env vars: `AGENTMAIL_API_KEY`, `ANTHROPIC_API_KEY` (Tavily and Hunter route through Locus — no separate keys needed)
 2. Ensure your Locus wallet has ≥ $5 USDC (agent operating budget)
 3. Set `USE_MOCK=false` in Vercel
 4. Redeploy
@@ -490,8 +493,8 @@ src/
 │   ├── events.ts                 # EventBus (EventEmitter wrapper, SSE bridge)
 │   ├── orchestrator.ts           # Main agent loop + budget controller
 │   └── steps/
-│       ├── 01-find-companies.ts  # Apollo company discovery
-│       ├── 02-enrich-contact.ts  # Clado contact enrichment
+│       ├── 01-find-companies.ts  # Tavily AI company discovery
+│       ├── 02-enrich-contact.ts  # Hunter contact enrichment
 │       ├── 03-screen-ofac.ts     # OFAC sanctions screening
 │       ├── 04-create-checkout.ts # Locus checkout session creation
 │       ├── 05-generate-email.ts  # Claude AI email generation
@@ -513,7 +516,7 @@ src/
     └── providers/
         ├── types.ts              # Shared domain types (Run, Prospect, etc.)
         ├── index.ts              # Provider factory (mock/real toggle)
-        ├── real/                 # Apollo, AgentMail, Clado, Claude, OFAC
+        ├── real/                 # Tavily, Hunter, AgentMail, Claude, OFAC
         └── mock/                 # Mock providers with realistic delays
 ```
 
