@@ -225,7 +225,7 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
   await pollForReplies(runId);
 
   // ── Finish ───────────────────────────────────────────────────────────────
-  const finalRun = (await import("@/lib/store")).getRun(runId)!;
+  const preFinishRun = (await import("@/lib/store")).getRun(runId)!;
   const finalStatus = budgetExhausted ? "budget_exhausted" : "completed";
   finishRun(runId, finalStatus);
 
@@ -235,15 +235,13 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
     prospectId: null,
     timestamp: nowIso(),
     action: "MISSION COMPLETE",
-    reasoning: `Total spent: $${finalRun.totalSpentUsdc.toFixed(4)} USDC. Total earned: $${finalRun.totalEarnedUsdc.toFixed(2)} USDC. ROI: ${finalRun.totalSpentUsdc > 0 ? (finalRun.totalEarnedUsdc / finalRun.totalSpentUsdc).toFixed(1) : "∞"}×.`,
+    reasoning: `Total spent: $${preFinishRun.totalSpentUsdc.toFixed(4)} USDC. Total earned: $${preFinishRun.totalEarnedUsdc.toFixed(2)} USDC. ROI: ${preFinishRun.totalSpentUsdc > 0 ? (preFinishRun.totalEarnedUsdc / preFinishRun.totalSpentUsdc).toFixed(1) : "∞"}×.`,
     cost: 0,
     txHash: null,
     status: "success",
   });
 
-  eventBus.emit(runId, "run_completed", {
-    status: finalStatus,
-    totalSpent: finalRun.totalSpentUsdc,
-    totalEarned: finalRun.totalEarnedUsdc,
-  });
+  // Emit FULL run object so dashboard can use it directly without wiping state
+  const completedRun = (await import("@/lib/store")).getRun(runId)!;
+  eventBus.emit(runId, "run_completed", completedRun);
 }

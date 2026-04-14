@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type {
   Run,
+  RunStatus,
   Prospect,
   AuditEntry,
   AgentEventType,
@@ -104,19 +105,9 @@ function HeroBanner() {
         </div>
         <div className="flex flex-col gap-2 shrink-0 text-right">
           <div style={{ fontSize: "0.6rem" }} className="text-sub uppercase tracking-widest">Powered by</div>
-          <div className="flex flex-col gap-1.5 items-end">
-            {[
-              { name: "Locus",     color: "#00ff9f", icon: "◈" },
-              { name: "AgentMail", color: "#00e5ff", icon: "✉" },
-              { name: "Apollo",    color: "#a78bfa", icon: "◉" },
-              { name: "Clado",     color: "#f59e0b", icon: "◎" },
-              { name: "OFAC",      color: "#f43f5e", icon: "⚠" },
-              { name: "Claude AI", color: "#fb923c", icon: "✦" },
-            ].map(({ name, color, icon }) => (
-              <div key={name} className="flex items-center gap-1.5">
-                <span style={{ color, fontSize: "0.7rem" }}>{icon}</span>
-                <span className="badge badge-dim">{name}</span>
-              </div>
+          <div className="flex flex-wrap gap-1.5 justify-end">
+            {["Locus", "AgentMail", "Apollo", "Clado", "OFAC", "Claude AI"].map((name) => (
+              <span key={name} className="badge" style={{ borderColor: "rgba(0,255,159,0.3)", color: "var(--accent-green)", background: "rgba(0,255,159,0.06)", fontWeight: 600 }}>{name}</span>
             ))}
           </div>
         </div>
@@ -712,15 +703,42 @@ export default function DashboardPage() {
     const es  = new EventSource(`/api/agent/stream?runId=${id}${qs}`);
     esRef.current = es;
     es.onopen  = () => { setSSE(true); setLaunching(false); };
-    es.onerror = () => setSSE(false);
+    es.onerror = () => {
+      setSSE(false);
+      // On connection drop, fetch latest run state so UI reflects final status
+      fetch("/api/agent/runs")
+        .then((r) => r.json())
+        .then((d: { runs?: Run[] }) => {
+          const runs = d.runs ?? [];
+          const fresh = runs.find((r) => r.id === id);
+          if (fresh) {
+            setRun(fresh);
+            setAllRuns((prev) => { const i = prev.findIndex((r) => r.id === fresh.id); if (i>=0){const c=[...prev];c[i]=fresh;return c;} return prev; });
+          }
+        }).catch(() => {});
+    };
     es.onmessage = (e) => {
       try {
         const ev: SSEEvent = JSON.parse(e.data);
         if (ev.type === "heartbeat") return;
-        if (["run_started","run_completed","run_failed","budget_exhausted"].includes(ev.type)) {
+        // run_started: set whole run (it's a full Run object)
+        if (ev.type === "run_started") {
           const u = ev.payload as Run;
           setRun(u);
           setAllRuns((p) => { const i = p.findIndex((r) => r.id === u.id); if (i>=0){const c=[...p];c[i]=u;return c;} return [u,...p]; });
+        }
+        // run_completed/failed: payload is now a full Run — merge it in
+        if (["run_completed","run_failed","budget_exhausted"].includes(ev.type)) {
+          const u = ev.payload as Run;
+          // If payload looks like a full Run (has prospects), replace outright; else just patch status
+          if (u && u.prospects !== undefined) {
+            setRun(u);
+            setAllRuns((p) => { const i = p.findIndex((r) => r.id === u.id); if (i>=0){const c=[...p];c[i]=u;return c;} return p; });
+          } else {
+            // Legacy fallback: merge partial payload
+            setRun((prev) => prev ? { ...prev, status: (u as unknown as {status: RunStatus}).status ?? prev.status } : prev);
+          }
+          es.close(); setSSE(false); setLaunching(false);
         }
         if (ev.type === "prospect_update") {
           const p = ev.payload as Prospect;
@@ -735,9 +753,8 @@ export default function DashboardPage() {
           setRun((prev) => prev ? { ...prev, auditLog: [...(prev.auditLog ?? []), entry] } : prev);
         }
         if (ev.type === "balance_update")   setBalance(ev.payload as WalletBalance);
-        if (ev.type === "payment_received") { const p = ev.payload as Prospect; setToast(`✓ Payment received from ${p.company?.name ?? "prospect"}!`); }
-        if (ev.type === "work_delivered")   { const p = ev.payload as Prospect; setToast(`★ Work delivered to ${p.company?.name ?? "client"}!`); }
-        if (["run_completed","run_failed","budget_exhausted"].includes(ev.type)) { es.close(); setSSE(false); setLaunching(false); }
+        if (ev.type === "payment_received") { const p = ev.payload as {company?: {name?: string}}; setToast(`✓ Payment received from ${p?.company?.name ?? "prospect"}!`); }
+        if (ev.type === "work_delivered")   { const p = ev.payload as {company?: {name?: string}}; setToast(`★ Work delivered to ${p?.company?.name ?? "client"}!`); }
       } catch { /* ignore */ }
     };
   }, []);
