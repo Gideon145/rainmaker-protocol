@@ -1,6 +1,8 @@
 // ─── Locus API client — server-side only, never import in client components ──
 // All calls go to beta-api.paywithlocus.com
 
+import type { TransactionRecord } from "@/lib/providers/types";
+
 const API_BASE = process.env.LOCUS_API_BASE ?? "https://beta-api.paywithlocus.com/api";
 const API_KEY  = process.env.LOCUS_API_KEY  ?? "";
 
@@ -40,8 +42,6 @@ export async function getBalance(): Promise<{ balance: string; address: string }
   const r = await locusRequest<{ balance: string; address: string }>("GET", "/pay/balance");
   return r.ok && r.data ? r.data : null;
 }
-
-import type { TransactionRecord } from "@/lib/providers/types";
 
 export async function getTransactions(): Promise<TransactionRecord[] | null> {
   const r = await locusRequest<{ transactions: TransactionRecord[] }>("GET", "/pay/transactions");
