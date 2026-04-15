@@ -18,7 +18,7 @@ function buildDemoRun(): Run {
   const prospects: Prospect[] = [
     {
       id: "p-01", runId: DEMO_RUN_ID,
-      company: { name: "Volkov Syndicate LLC", domain: "volkovsyndicate.io", industry: "Cybersecurity", size: "11-50", location: "Moscow, RU", techStack: ["Python", "C++", "Tor"] },
+      company: { id: "c-01", name: "Volkov Syndicate LLC", domain: "volkovsyndicate.io", industry: "Cybersecurity", size: "11-50", location: "Moscow, RU", techStack: ["Python", "C++", "Tor"], description: "Cybersecurity firm specialising in offensive security tools and threat intelligence." },
       contact: null,
       ofacResult: { clean: false, matches: [{ name: "Volkov Syndicate LLC", score: 96, list: "SDN", reason: "Designated entity under EO-13694 (cyber-related sanctions)" }] },
       status: "ofac_blocked", checkoutSessionId: null, checkoutUrl: null,
@@ -27,7 +27,7 @@ function buildDemoRun(): Run {
     },
     {
       id: "p-02", runId: DEMO_RUN_ID,
-      company: { name: "Meridian SaaS Co.", domain: "meridiansaas.com", industry: "B2B SaaS", size: "51-200", location: "Austin, TX", techStack: ["React", "Node.js", "PostgreSQL"] },
+      company: { id: "c-02", name: "Meridian SaaS Co.", domain: "meridiansaas.com", industry: "B2B SaaS", size: "51-200", location: "Austin, TX", techStack: ["React", "Node.js", "PostgreSQL"], description: "B2B SaaS platform for revenue operations and pipeline analytics, migrating to a modern React stack." },
       contact: { firstName: "Priya", lastName: "Ramesh", title: "CTO", email: "p.ramesh@meridiansaas.com", reputation: "verified" },
       ofacResult: { clean: true, matches: [] },
       status: "delivered",
@@ -41,7 +41,7 @@ function buildDemoRun(): Run {
     },
     {
       id: "p-03", runId: DEMO_RUN_ID,
-      company: { name: "InfraStack Labs", domain: "infrastacklabs.io", industry: "DevOps / Cloud", size: "11-50", location: "London, UK", techStack: ["Kubernetes", "Go", "Terraform"] },
+      company: { id: "c-03", name: "InfraStack Labs", domain: "infrastacklabs.io", industry: "DevOps / Cloud", size: "11-50", location: "London, UK", techStack: ["Kubernetes", "Go", "Terraform"], description: "Cloud-native infrastructure consultancy building internal developer platforms on Kubernetes." },
       contact: { firstName: "James", lastName: "Okafor", title: "Head of Engineering", email: "james@infrastacklabs.io", reputation: "verified" },
       ofacResult: { clean: true, matches: [] },
       status: "awaiting_payment",
@@ -53,7 +53,7 @@ function buildDemoRun(): Run {
     },
     {
       id: "p-04", runId: DEMO_RUN_ID,
-      company: { name: "NovaPay Fintech", domain: "novapayfintech.com", industry: "Fintech", size: "51-200", location: "Singapore", techStack: ["TypeScript", "Next.js", "Stripe"] },
+      company: { id: "c-04", name: "NovaPay Fintech", domain: "novapayfintech.com", industry: "Fintech", size: "51-200", location: "Singapore", techStack: ["TypeScript", "Next.js", "Stripe"], description: "SEA-focused payments infrastructure startup processing cross-border USDC settlements." },
       contact: { firstName: "Mei", lastName: "Chen", title: "VP Engineering", email: "m.chen@novapayfintech.com", reputation: "verified" },
       ofacResult: { clean: true, matches: [] },
       status: "outreach_sent",
@@ -65,7 +65,7 @@ function buildDemoRun(): Run {
     },
     {
       id: "p-05", runId: DEMO_RUN_ID,
-      company: { name: "Cortex Analytics", domain: "cortex.ai", industry: "AI / Data", size: "11-50", location: "Berlin, DE", techStack: ["Python", "FastAPI", "dbt"] },
+      company: { id: "c-05", name: "Cortex Analytics", domain: "cortex.ai", industry: "AI / Data", size: "11-50", location: "Berlin, DE", techStack: ["Python", "FastAPI", "dbt"], description: "AI-native analytics platform turning warehouse data into real-time business intelligence dashboards." },
       contact: { firstName: "Tobias", lastName: "Werner", title: "Co-Founder", email: "t.werner@cortex.ai", reputation: "verified" },
       ofacResult: { clean: true, matches: [] },
       status: "outreach_sent",
