@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBalance, getTransactions } from "@/lib/locus";
+import type { WalletBalance, TransactionRecord } from "@/lib/providers/types";
 
 /**
  * GET /api/wallet

@@ -209,3 +209,14 @@ export interface WalletBalance {
   balance: string;
   address: string;
 }
+
+export interface TransactionRecord {
+  id: string;
+  type: string;
+  amount: string;
+  asset: string;
+  status: string;
+  txHash: string | null;
+  createdAt: string;
+  description?: string;
+}

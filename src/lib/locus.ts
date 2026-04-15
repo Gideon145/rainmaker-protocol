@@ -41,16 +41,7 @@ export async function getBalance(): Promise<{ balance: string; address: string }
   return r.ok && r.data ? r.data : null;
 }
 
-export interface TransactionRecord {
-  id: string;
-  type: string;
-  amount: string;
-  asset: string;
-  status: string;
-  txHash: string | null;
-  createdAt: string;
-  description?: string;
-}
+import type { TransactionRecord } from "@/lib/providers/types";
 
 export async function getTransactions(): Promise<TransactionRecord[] | null> {
   const r = await locusRequest<{ transactions: TransactionRecord[] }>("GET", "/pay/transactions");

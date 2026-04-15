@@ -8,8 +8,8 @@ import type {
   AuditEntry,
   AgentEventType,
   WalletBalance,
+  TransactionRecord,
 } from "@/lib/providers/types";
-import type { TransactionRecord } from "@/lib/locus";
 
 interface SSEEvent {
   type: AgentEventType;
