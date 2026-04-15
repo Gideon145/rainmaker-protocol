@@ -243,10 +243,11 @@ function HowToUsePanel() {
 
 // ─── Top Bar ─────────────────────────────────────────────────────────────────
 
-function TopBar({ balance, sseConnected, run }: {
+function TopBar({ balance, sseConnected, run, governanceStatus }: {
   balance: WalletBalance | null;
   sseConnected: boolean;
   run: Run | null;
+  governanceStatus: "within_limits" | "pending_approval" | "policy_active";
 }) {
   const m = RUN_STATUS_META[run?.status ?? "idle"] ?? RUN_STATUS_META.idle;
   return (
@@ -266,7 +267,18 @@ function TopBar({ balance, sseConnected, run }: {
       <div className="flex items-center gap-4 shrink-0">
         {balance ? (
           <div className="hidden sm:flex flex-col items-end gap-0.5">
-            <span className="text-neon text-xs font-bold">{parseFloat(balance.balance).toFixed(4)} USDC</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-neon text-xs font-bold">{parseFloat(balance.balance).toFixed(4)} USDC</span>
+              {governanceStatus === "pending_approval" && (
+                <span title="Spending approval pending" style={{ fontSize: "0.58rem", letterSpacing: "0.1em" }} className="text-amber-400 border border-amber-400/40 px-1 rounded">PENDING</span>
+              )}
+              {governanceStatus === "policy_active" && (
+                <span title="Policy rejected a transaction" style={{ fontSize: "0.58rem", letterSpacing: "0.1em" }} className="text-red-400 border border-red-400/40 px-1 rounded">POLICY</span>
+              )}
+              {governanceStatus === "within_limits" && (
+                <span title="Spending within limits" style={{ fontSize: "0.58rem" }} className="text-green-400">●</span>
+              )}
+            </div>
             <span className="text-sub" style={{ fontSize: "0.55rem" }}>{balance.address.slice(0, 10)}…</span>
           </div>
         ) : (
@@ -696,7 +708,8 @@ export default function DashboardPage() {
   const [run, setRun]             = useState<Run | null>(null);
   const [runId, setRunId]         = useState<string | null>(null);
   const [allRuns, setAllRuns]     = useState<Run[]>([]);
-  const [balance, setBalance]     = useState<WalletBalance | null>(null);
+  const [balance, setBalance]             = useState<WalletBalance | null>(null);
+  const [governanceStatus, setGovernance] = useState<"within_limits" | "pending_approval" | "policy_active">("within_limits");
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [launching, setLaunching] = useState(false);
@@ -723,9 +736,12 @@ export default function DashboardPage() {
       try {
         const r = await fetch("/api/wallet");
         if (!r.ok || cancelled) return;
-        const d = (await r.json()) as { balance?: WalletBalance; transactions?: TransactionRecord[] };
+        const d = (await r.json()) as { balance?: WalletBalance; transactions?: TransactionRecord[]; spendingControls?: { governance?: { status?: string } } };
         if (d.balance)       setBalance(d.balance);
         if (d.transactions)  setTransactions(d.transactions);
+        if (d.spendingControls?.governance?.status) {
+          setGovernance(d.spendingControls.governance.status as "within_limits" | "pending_approval" | "policy_active");
+        }
       } catch { /* offline / mock env — ignore */ }
     }
     pollWallet();
@@ -881,7 +897,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <TopBar balance={balance} sseConnected={sseConnected} run={run} />
+      <TopBar balance={balance} sseConnected={sseConnected} run={run} governanceStatus={governanceStatus} />
 
       <div className="flex-1 p-4 sm:p-5 max-w-screen-2xl mx-auto w-full flex flex-col gap-4">
 
