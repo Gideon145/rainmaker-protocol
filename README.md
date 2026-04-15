@@ -24,7 +24,7 @@
 
 > Left to right: idle dashboard → 8-step pipeline view → active run with live OFAC block and audit stream → MISSION COMPLETE ($2.64 spent · $50.00 earned · **18.9x ROI**)
 
-▶ **[Watch the demo on YouTube](https://youtube.com/shorts/-2F4Q7gZOaQ?feature=share)**
+▶ **[Watch the demo on YouTube](https://youtu.be/UJ5HMldoKyQ)**
 
 ---
 
