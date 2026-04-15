@@ -3,12 +3,12 @@ import { eventBus } from "@/agent/events";
 import { getRun, createRun } from "@/lib/store";
 import { executeRun } from "@/agent/orchestrator";
 import { isRateLimited, getClientIp } from "@/lib/rate-limit";
+import type { AgentEvent } from "@/lib/providers/types";
 
 // Strip prompt-injection characters from skill before passing to agent
 function sanitizeSkill(input: string): string {
   return input.replace(/[^\w\s.,+#\-()&/]/g, "").trim();
 }
-import type { AgentEvent } from "@/lib/providers/types";
 
 export const dynamic = "force-dynamic";
 
