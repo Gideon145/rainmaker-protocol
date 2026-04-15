@@ -39,13 +39,34 @@ async function locusRequest<T>(
 // ─── Wallet ───────────────────────────────────────────────────────────────
 
 export async function getBalance(): Promise<{ balance: string; address: string } | null> {
-  const r = await locusRequest<{ balance: string; address: string }>("GET", "/pay/balance");
-  return r.ok && r.data ? r.data : null;
+  const r = await locusRequest<{ usdc_balance: string; wallet_address: string }>("GET", "/pay/balance");
+  if (!r.ok || !r.data) return null;
+  return { balance: r.data.usdc_balance, address: r.data.wallet_address };
 }
 
 export async function getTransactions(): Promise<TransactionRecord[] | null> {
-  const r = await locusRequest<{ transactions: TransactionRecord[] }>("GET", "/pay/transactions");
-  return r.ok && r.data?.transactions ? r.data.transactions : null;
+  interface RawTx {
+    id: string;
+    category: string;
+    amount_usdc: string;
+    status: string;
+    tx_hash: string | null;
+    created_at: string;
+    memo?: string;
+    tokens?: { symbol?: string }[];
+  }
+  const r = await locusRequest<{ transactions: RawTx[] }>("GET", "/pay/transactions");
+  if (!r.ok || !r.data?.transactions) return null;
+  return r.data.transactions.map((t) => ({
+    id: t.id,
+    type: t.category,
+    amount: t.amount_usdc,
+    asset: t.tokens?.[0]?.symbol ?? "USDC",
+    status: t.status,
+    txHash: t.tx_hash,
+    createdAt: t.created_at,
+    description: t.memo,
+  }));
 }
 
 // ─── Checkout sessions ────────────────────────────────────────────────────
