@@ -813,7 +813,8 @@ export default function DashboardPage() {
         if (ev.type === "heartbeat") return;
         if (ev.type === "run_started") {
           const u = ev.payload as Run;
-          setRunId(u.id);
+          // Do NOT call setRunId here — it would trigger the useEffect that
+          // calls connectSSE(), killing this replay EventSource.
           setRun(u);
           setAllRuns((p) => [u, ...p.filter((r) => r.id !== u.id)]);
           setLaunching(false);
