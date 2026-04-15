@@ -9,6 +9,7 @@ import type {
   AgentEventType,
   WalletBalance,
 } from "@/lib/providers/types";
+import type { TransactionRecord } from "@/lib/locus";
 
 interface SSEEvent {
   type: AgentEventType;
@@ -86,7 +87,7 @@ const hhmm = (iso: string) =>
 
 // ─── Hero Banner ─────────────────────────────────────────────────────────────
 
-function HeroBanner() {
+function HeroBanner({ isDemoMode }: { isDemoMode: boolean }) {
   return (
     <div className="glow-card p-6 sm:p-8" style={{ background: "linear-gradient(135deg, rgba(0,255,159,0.04) 0%, rgba(0,229,255,0.04) 50%, rgba(6,6,15,1) 100%)", borderColor: "rgba(0,255,159,0.15)" }}>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -116,10 +117,10 @@ function HeroBanner() {
       {/* Quick stats row */}
       <div className="mt-5 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         {[
-          { label: "Agent Steps", value: "8",         icon: "⚡", color: "text-neon"   },
-          { label: "APIs Used",   value: "10",        icon: "◈",  color: "text-cyan"   },
-          { label: "Budget Cap",  value: "$5 USDC",   icon: "⚠",  color: "text-amber"  },
-          { label: "Mode",        value: "MOCK · SAFE",icon: "◉",  color: "text-green-400" },
+          { label: "Agent Steps", value: "9",          icon: "⚡", color: "text-neon"   },
+          { label: "APIs Used",   value: "11",         icon: "◈",  color: "text-cyan"   },
+          { label: "Budget Cap",  value: "$5 USDC",    icon: "⚠",  color: "text-amber"  },
+          { label: "Mode",        value: isDemoMode ? "DEMO · REPLAY" : "MOCK · SAFE", icon: "◉",  color: isDemoMode ? "text-cyan" : "text-green-400" },
         ].map(({ label, value, icon, color }) => (
           <div key={label} className="flex items-center gap-2">
             <span className={`${color} text-lg`}>{icon}</span>
@@ -696,6 +697,8 @@ export default function DashboardPage() {
   const [runId, setRunId]         = useState<string | null>(null);
   const [allRuns, setAllRuns]     = useState<Run[]>([]);
   const [balance, setBalance]     = useState<WalletBalance | null>(null);
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [launching, setLaunching] = useState(false);
   const [toast, setToast]         = useState<string | null>(null);
   const [sseConnected, setSSE]    = useState(false);
@@ -711,6 +714,23 @@ export default function DashboardPage() {
         const active = runs.find((r) => r.status === "running");
         if (active) { setRunId(active.id); setRun(active); }
       }).catch(() => {});
+  }, []);
+
+  // Poll /api/wallet every 30 s for live balance + transaction history
+  useEffect(() => {
+    let cancelled = false;
+    async function pollWallet() {
+      try {
+        const r = await fetch("/api/wallet");
+        if (!r.ok || cancelled) return;
+        const d = (await r.json()) as { balance?: WalletBalance; transactions?: TransactionRecord[] };
+        if (d.balance)       setBalance(d.balance);
+        if (d.transactions)  setTransactions(d.transactions);
+      } catch { /* offline / mock env — ignore */ }
+    }
+    pollWallet();
+    const id = setInterval(pollWallet, 30_000);
+    return () => { cancelled = true; clearInterval(id); };
   }, []);
 
   const connectSSE = useCallback((id: string) => {
@@ -782,6 +802,7 @@ export default function DashboardPage() {
 
   async function handleStart(skill: string, hourlyRate: number) {
     setLaunching(true);
+    setIsDemoMode(false);
     try {
       const res  = await fetch("/api/agent/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ skill, hourlyRate }) });
       const data = (await res.json()) as { runId?: string; error?: string };
@@ -803,6 +824,7 @@ export default function DashboardPage() {
     setRunId(null);
     setLaunching(true);
     setSSE(false);
+    setIsDemoMode(true);
     const es = new EventSource("/api/agent/replay");
     esRef.current = es;
     es.onerror = () => { es.close(); setSSE(false); setLaunching(false); };
@@ -825,7 +847,7 @@ export default function DashboardPage() {
             setRun(u);
             setAllRuns((p) => { const i = p.findIndex((r) => r.id === u.id); if (i>=0){const c=[...p];c[i]=u;return c;} return p; });
           }
-          es.close(); setSSE(false); setLaunching(false);
+          es.close(); setSSE(false); setLaunching(false); setIsDemoMode(false);
         }
         if (ev.type === "prospect_update") {
           const p = ev.payload as Prospect;
@@ -855,6 +877,7 @@ export default function DashboardPage() {
   const isRunning = run?.status === "running";
   const prospects = run?.prospects ?? [];
   const auditLog  = run?.auditLog  ?? [];
+  void transactions; // available for future transaction feed panel
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -863,7 +886,7 @@ export default function DashboardPage() {
       <div className="flex-1 p-4 sm:p-5 max-w-screen-2xl mx-auto w-full flex flex-col gap-4">
 
         {/* Hero */}
-        <HeroBanner />
+        <HeroBanner isDemoMode={isDemoMode} />
 
         {/* Collapsible info panels */}
         <HowItWorksPanel />

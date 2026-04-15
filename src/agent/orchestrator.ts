@@ -13,6 +13,7 @@ import type { Prospect } from "@/lib/providers/types";
 
 import { findCompanies } from "./steps/01-find-companies";
 import { enrichContact } from "./steps/02-enrich-contact";
+import { checkRiskScore } from "./steps/check-risk-score";
 import { screenOFAC } from "./steps/03-screen-ofac";
 import { createCheckout } from "./steps/04-create-checkout";
 import { generateEmail } from "./steps/05-generate-email";
@@ -163,6 +164,10 @@ export async function executeRun(runId: string, params: StartRunParams): Promise
     try {
       // 1. Enrich contact
       prospect = await enrichContact(prospect);
+      if (prospect.status === "failed") continue;
+
+      // 1b. Risk score gate — blocks low-confidence prospects before paid APIs
+      prospect = await checkRiskScore(prospect);
       if (prospect.status === "failed") continue;
 
       // 2. OFAC screen

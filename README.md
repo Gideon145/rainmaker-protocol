@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Security](https://img.shields.io/badge/Security_Review-2_patched-00c853?style=for-the-badge&logo=shield&logoColor=white)](https://github.com/Gideon145/rainmaker-protocol/commit/b1f904c)
-[![APIs](https://img.shields.io/badge/Locus%20APIs-10_integrated-4101f6?style=for-the-badge)](https://beta-api.paywithlocus.com)
+[![APIs](https://img.shields.io/badge/Locus%20APIs-11_integrated-4101f6?style=for-the-badge)](https://beta-api.paywithlocus.com)
 
 ---
 
@@ -64,6 +64,8 @@ Locus is the payment backbone of the entire pipeline. Without Locus, there is no
 | **Webhook** (`POST /api/webhooks/locus`) | Real-time `CHECKOUT_PAID` event push | Instant delivery trigger — no polling lag when webhook fires |
 | **HMAC Verification** | `X-Locus-Signature` on every inbound webhook | Unconditional — no bypass path, `crypto.timingSafeEqual` with length guard |
 | **AgentMail x402** (`POST /api/x402/agentmail-create-inbox`) | Step 6 — autonomous agent email inbox creation | x402 HTTP-native payment — **confirmed $2.00 USDC on-chain, Apr 14 2026** |
+| **Wallet Balance** (`GET /pay/balance`) | TopBar live balance display, polled every 30 s | Real-time USDC balance wired to the dashboard via `/api/wallet` endpoint |
+| **Transaction History** (`GET /pay/transactions`) | Audit feed — every on-chain debit visible in real time | Complete agent spending ledger fetched alongside balance on every poll |
 
 ```typescript
 // Step 4 — create a Locus Checkout session per prospect
@@ -154,7 +156,7 @@ All 10 transactions: **Status Completed · Agent-initiated · On Base**
 
 ---
 
-## The 8-Step Pipeline
+## The 9-Step Pipeline
 
 Each prospect moves through a strict deterministic state machine. No step is skipped. Every decision is logged with cost and reasoning.
 
@@ -169,6 +171,12 @@ Each prospect moves through a strict deterministic state machine. No step is ski
 - Returns name, title, LinkedIn URL, verified email address, and confidence score
 - Prioritises engineering/IT department contacts with senior/executive seniority
 - Falls back to any named contact if no engineering contacts found
+
+### Step 2b — Risk Score Gate (`check-risk-score.ts`)
+- Runs after Hunter enrichment, **before any paid API calls** (OFAC, Claude, AgentMail)
+- Computes a 0–100 confidence score from: Hunter email reputation, contact seniority, company data richness
+- Prospects scoring below 35/100 are **hard-blocked** — no API budget consumed on low-quality leads
+- Decision + full score breakdown appears in the audit log (e.g. `"email flagged risky by Hunter (-15). VP Engineering title (+15). Score: 50/100 — PASS"`)
 
 ### Step 3 — OFAC Sanctions Screening (`03-screen-ofac.ts`)
 - Checks every company and contact against the **OFAC SDN (Specially Designated Nationals)** list and EU consolidated sanctions list
@@ -290,21 +298,49 @@ Allocates a `runId`. Does not start the agent — execution begins when the SSE 
 ### `GET /api/agent/stream?runId=&skill=&rate=`
 Opens an SSE stream. If `skill` + `rate` are present (`autostart=true`), the agent executes inside this HTTP invocation — keeping the serverless function alive for the full pipeline duration. All events are streamed as unnamed `data:` frames containing JSON payloads.
 
-### `POST /api/agent/hire` — Agent-to-Agent API
-Hire Rainmaker Protocol programmatically from another AI agent. Accepts a job, fires the full 8-step pipeline in the background, and returns immediately. Optional `webhookUrl` receives the result when the run completes.
+### `POST /api/agent/hire` — Agent-to-Agent x402 API
 
-**Request:**
+Hire Rainmaker Protocol programmatically from another AI agent using the **x402 HTTP payment protocol**. The endpoint requires 1 USDC payment on Base before accepting any run.
+
+**x402 flow:**
+1. POST without `X-Payment` → receive **402** with USDC/Base payment requirements
+2. Agent pays exactly 1 USDC to Rainmaker's Locus wallet on Base
+3. Re-POST with `X-Payment: <base64 payment proof>` → receive **202 accepted**
+
+**402 response body:**
 ```json
+{
+  "x402Version": 1,
+  "accepts": [{
+    "scheme": "exact",
+    "network": "base",
+    "maxAmountRequired": "1000000",
+    "payTo": "0x<locus-agent-wallet>",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "description": "Hire Rainmaker Protocol — autonomous B2B client acquisition agent. 1 USDC per run."
+  }]
+}
+```
+
+**202 request (with payment):**
+```http
+POST /api/agent/hire
+X-Payment: <base64-encoded { x402Version, scheme, network, payload: { from, txHash, amount } }>
+Content-Type: application/json
+
 { "skill": "React development", "hourlyRate": 75, "webhookUrl": "https://your-agent.com/callback" }
 ```
-**Response (202):**
+
+**202 response:**
 ```json
 {
   "runId": "uuid-v4",
   "status": "running",
   "pollUrl": "https://rainmaker-protocol.vercel.app/api/agent/runs/{runId}",
   "streamUrl": "https://rainmaker-protocol.vercel.app/api/agent/stream?runId={runId}",
-  "message": "Rainmaker Protocol agent started. Poll pollUrl for status or subscribe to streamUrl for real-time SSE events."
+  "payer": "0x<agent-wallet>",
+  "hireFee": "1 USDC",
+  "message": "Rainmaker Protocol agent started."
 }
 ```
 
