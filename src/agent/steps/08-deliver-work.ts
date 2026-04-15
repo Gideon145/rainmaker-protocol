@@ -3,6 +3,7 @@ import { mail } from "@/lib/providers";
 import { getRun, upsertProspect, addAuditEntry } from "@/lib/store";
 import { uuid, nowIso } from "@/lib/utils";
 import { eventBus } from "@/agent/events";
+import { sendEmailPayment } from "@/lib/locus";
 import type { Prospect, Run } from "@/lib/providers/types";
 
 export async function deliverWork(prospect: Prospect, run: Run): Promise<void> {
@@ -55,6 +56,31 @@ export async function deliverWork(prospect: Prospect, run: Run): Promise<void> {
     cost: 0.01,
     txHash: null,
     status: "success",
+  });
+
+  // Email escrow payment — subwallet flow: pay prospect confirmation USDC via Locus escrow.
+  // Demonstrates full earn → pay economic loop: agent earns checkout payment, then pays
+  // the prospect back a service-delivery confirmation held in time-limited escrow.
+  const escrow = await sendEmailPayment({
+    email: prospect.contact.email,
+    amount: 0.50,
+    memo: `Service delivery confirmation — ${run.skill} session with ${prospect.company.name}`,
+    expiresInDays: 30,
+  });
+  addAuditEntry(run.id, {
+    id: uuid(),
+    runId: run.id,
+    prospectId: prospect.id,
+    timestamp: nowIso(),
+    action: escrow.ok
+      ? `💸 ESCROW PAYMENT QUEUED — ${prospect.company.name}`
+      : `⚠️ ESCROW PAYMENT FAILED — ${prospect.company.name}`,
+    reasoning: escrow.ok
+      ? `Sent 0.50 USDC via Locus email escrow (subwallet) to ${prospect.contact.email} as service-delivery confirmation. Escrow ID: ${escrow.escrowId}. Funds held until ${escrow.expiresAt ?? "recipient claims"}. Closes the earn→pay loop: checkout USDC in → deliverable + USDC out.`
+      : `Email escrow payment to ${prospect.contact.email} failed: ${escrow.error ?? "unknown error"}. Delivery still complete — escrow is best-effort.`,
+    cost: escrow.ok ? 0.50 : 0,
+    txHash: escrow.transactionId ?? null,
+    status: escrow.ok ? "success" : "failed",
   });
 
   eventBus.emit(run.id, "work_delivered", {

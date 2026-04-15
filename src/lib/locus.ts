@@ -141,6 +141,94 @@ export async function callX402<T>(
   return { ok: true, data: r.data };
 }
 
+// ─── Email escrow / subwallet payments ───────────────────────────────────
+
+export interface EmailPaymentResult {
+  ok: boolean;
+  transactionId?: string;
+  escrowId?: string;
+  status?: string;
+  expiresAt?: string;
+  error?: string;
+}
+
+/** Send USDC to a recipient via Locus email escrow (subwallet flow).
+ *  Funds are held in a time-limited escrow until the recipient claims them.
+ *  Demonstrates the full earn→pay economic loop within a single agent run.
+ */
+export async function sendEmailPayment(params: {
+  email: string;
+  amount: number;
+  memo: string;
+  expiresInDays?: number;
+}): Promise<EmailPaymentResult> {
+  const r = await locusRequest<{
+    transaction_id: string;
+    escrow_id: string;
+    status: string;
+    recipient_email: string;
+    amount: number;
+    expires_at: string;
+  }>("POST", "/pay/send-email", {
+    email: params.email,
+    amount: params.amount,
+    memo: params.memo,
+    expires_in_days: params.expiresInDays ?? 30,
+  });
+  if (!r.ok) return { ok: false, error: r.message };
+  return {
+    ok: true,
+    transactionId: r.data?.transaction_id,
+    escrowId: r.data?.escrow_id,
+    status: r.data?.status,
+    expiresAt: r.data?.expires_at,
+  };
+}
+
+// ─── Agent self-registration ──────────────────────────────────────────────
+
+export interface RegisterSubAgentResult {
+  ok: boolean;
+  apiKey?: string;
+  ownerPrivateKey?: string;
+  walletId?: string;
+  walletStatus?: string;
+  claimUrl?: string;
+  defaults?: { allowanceUsdc: string; maxAllowedTxnSizeUsdc: string };
+  error?: string;
+}
+
+/** Register a new sub-agent wallet via Locus (beta).
+ *  Returns API key + wallet ID for the newly created agent.
+ *  The apiKey and ownerPrivateKey are shown only once — store securely.
+ */
+export async function registerSubAgent(params?: {
+  name?: string;
+  email?: string;
+}): Promise<RegisterSubAgentResult> {
+  const r = await locusRequest<{
+    apiKey: string;
+    ownerPrivateKey: string;
+    walletId: string;
+    walletStatus: string;
+    claimUrl: string;
+    defaults: { allowanceUsdc: string; maxAllowedTxnSizeUsdc: string };
+  }>("POST", "/register", {
+    name: params?.name ?? "Rainmaker Sub-Agent",
+    ...(params?.email ? { email: params.email } : {}),
+  });
+  if (!r.ok) return { ok: false, error: r.message };
+  return {
+    ok: true,
+    apiKey: r.data?.apiKey,
+    ownerPrivateKey: r.data?.ownerPrivateKey,
+    walletId: r.data?.walletId,
+    walletStatus: r.data?.walletStatus,
+    claimUrl: r.data?.claimUrl,
+    defaults: r.data?.defaults,
+  };
+}
+
 // ─── Feedback (submit on every error) ────────────────────────────────────
 
 export async function submitFeedback(params: {
