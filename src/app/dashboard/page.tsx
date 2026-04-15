@@ -714,6 +714,8 @@ export default function DashboardPage() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [launching, setLaunching] = useState(false);
   const [toast, setToast]         = useState<string | null>(null);
+  const [registerResult, setRegisterResult] = useState<{ walletId: string; claimUrl: string; defaults: { allowanceUsdc: string; maxAllowedTxnSizeUsdc: string } } | null>(null);
+  const [registering, setRegistering] = useState(false);
   const [sseConnected, setSSE]    = useState(false);
   const esRef           = useRef<EventSource | null>(null);
   const pendingParams   = useRef<{ skill: string; rate: number } | null>(null);
@@ -834,6 +836,18 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleRegister() {
+    setRegistering(true);
+    setRegisterResult(null);
+    try {
+      const r = await fetch("/api/agent/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Rainmaker Sub-Agent" }) });
+      const d = await r.json() as { walletId?: string; claimUrl?: string; defaults?: { allowanceUsdc: string; maxAllowedTxnSizeUsdc: string }; error?: string };
+      if (!r.ok || d.error) { setToast(`✕ Registration failed: ${d.error ?? "unknown error"}`); }
+      else { setRegisterResult({ walletId: d.walletId!, claimUrl: d.claimUrl!, defaults: d.defaults! }); setToast("✓ Sub-agent wallet created via Locus!"); }
+    } catch { setToast("✕ Registration request failed"); }
+    finally { setRegistering(false); }
+  }
+
   function handleDemo() {
     esRef.current?.close();
     setRun(null);
@@ -920,6 +934,43 @@ export default function DashboardPage() {
           {/* Sidebar */}
           <div className="flex flex-col gap-4">
             <LaunchForm onStart={handleStart} onDemo={handleDemo} loading={launching} disabled={isRunning} agentEmail={run?.agentEmail ?? null} />
+
+            {/* Sub-agent registration */}
+            <div className="card" style={{ borderColor: "rgba(161,100,255,0.3)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span style={{ color: "var(--accent-purple)", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.15em" }}>◈ LOCUS SUB-AGENT</span>
+              </div>
+              <p className="text-sub mb-3" style={{ fontSize: "0.65rem", lineHeight: 1.6 }}>
+                Spawn a new Locus agent wallet on-the-fly. Demonstrates agent-creates-agent-wallet via the Locus self-registration API.
+              </p>
+              {registerResult ? (
+                <div className="flex flex-col gap-1.5" style={{ fontSize: "0.6rem", fontFamily: "monospace" }}>
+                  <div className="flex gap-2">
+                    <span className="text-sub">WALLET</span>
+                    <span className="text-neon" style={{ wordBreak: "break-all" }}>{registerResult.walletId}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-sub">ALLOWANCE</span>
+                    <span style={{ color: "var(--accent-cyan)" }}>${registerResult.defaults.allowanceUsdc} USDC</span>
+                    <span className="text-sub">· MAX TXN</span>
+                    <span style={{ color: "var(--accent-cyan)" }}>${registerResult.defaults.maxAllowedTxnSizeUsdc} USDC</span>
+                  </div>
+                  <a href={registerResult.claimUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-xs mt-1" style={{ color: "var(--accent-purple)", textDecoration: "underline" }}>
+                    → Claim wallet on Locus dashboard
+                  </a>
+                  <button onClick={() => setRegisterResult(null)} type="button" className="btn-neon mt-2"
+                    style={{ borderColor: "rgba(161,100,255,0.4)", color: "var(--accent-purple)", fontSize: "0.6rem", padding: "4px 10px" }}>
+                    ↺ SPAWN ANOTHER
+                  </button>
+                </div>
+              ) : (
+                <button onClick={handleRegister} disabled={registering} type="button" className="btn-neon w-full"
+                  style={{ borderColor: "rgba(161,100,255,0.5)", color: "var(--accent-purple)", fontSize: "0.65rem" }}>
+                  {registering ? "⟳ REGISTERING…" : "◈ SPAWN SUB-AGENT WALLET"}
+                </button>
+              )}
+            </div>
             <RunHistory runs={allRuns} currentRunId={runId} onSelect={(id) => { const f = allRuns.find((r) => r.id === id); if (f) { setRunId(id); setRun(f); } }} />
           </div>
 
