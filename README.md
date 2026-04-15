@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Security](https://img.shields.io/badge/Security_Review-2_patched-00c853?style=for-the-badge&logo=shield&logoColor=white)](https://github.com/Gideon145/rainmaker-protocol/commit/b1f904c)
-[![APIs](https://img.shields.io/badge/Locus%20APIs-11_integrated-4101f6?style=for-the-badge)](https://beta-api.paywithlocus.com)
+[![APIs](https://img.shields.io/badge/Locus%20APIs-14_integrated-4101f6?style=for-the-badge)](https://beta-api.paywithlocus.com)
 
 ---
 
@@ -66,6 +66,9 @@ Locus is the payment backbone of the entire pipeline. Without Locus, there is no
 | **AgentMail x402** (`POST /api/x402/agentmail-create-inbox`) | Step 6 — autonomous agent email inbox creation | x402 HTTP-native payment — **confirmed $2.00 USDC on-chain, Apr 14 2026** |
 | **Wallet Balance** (`GET /pay/balance`) | TopBar live balance display, polled every 30 s | Real-time USDC balance wired to the dashboard via `/api/wallet` endpoint |
 | **Transaction History** (`GET /pay/transactions`) | Audit feed — every on-chain debit visible in real time | Complete agent spending ledger fetched alongside balance on every poll |
+| **Email Escrow** (`POST /pay/send-email`) | Step 8 — send USDC to prospect via Locus time-limited email escrow after work delivery | Closes the full **earn → pay** economic loop: prospect pays Rainmaker, Rainmaker pays back via subwallet escrow — zero human involvement |
+| **Agent Self-Registration** (`POST /register`) | `/api/agent/register` — creates a new sub-agent wallet on demand | Demonstrates agent-creates-agent-wallet capability; returns one-time API key + wallet credentials via Locus beta registration |
+| **Spending Controls** (`GET /pay/transactions` derived) | `/api/wallet` response includes `spendingControls` governance state | Surfaces `pendingApprovalCount`, `policyRejectedCount`, and `governance.status` — agent already reacts to 403 (budget exceeded) and 202 (pending approval) from Locus policy guardrails |
 
 ```typescript
 // Step 4 — create a Locus Checkout session per prospect
@@ -211,6 +214,8 @@ Each prospect moves through a strict deterministic state machine. No step is ski
 ### Step 8 — Automated Work Delivery (`08-deliver-work.ts`)
 - On payment confirmation: calls Claude to generate a personalised session brief (agenda, scope, pre-work questions tailored to the company's tech stack)
 - Sends it via AgentMail as a reply to the original outreach thread
+- Calls **`POST /pay/send-email`** (Locus email escrow) to send 0.50 USDC back to the prospect as a service-delivery confirmation — funds held in a 30-day time-limited subwallet escrow until the recipient claims them
+- Both the delivery and the escrow payment are logged as separate audit entries (escrow failure is non-blocking — delivery always completes)
 - Updates `totalEarnedUsdc` on the run, marks prospect `delivered`
 - Emits `work_delivered` SSE event to the dashboard in real time
 
@@ -352,6 +357,46 @@ Returns all runs from the in-memory store with their full prospect and audit log
 
 ### `POST /api/webhooks/locus`
 Receives Locus payment webhooks. Verifies HMAC signature, correlates `checkoutSessionId` to a prospect, triggers work delivery. Idempotent.
+
+### `POST /api/agent/register`
+Demonstrates Locus agent self-registration. Creates a new sub-agent wallet on-the-fly via `POST /api/register` (Locus beta). Returns one-time credentials — **`apiKey` and `ownerPrivateKey` are shown once and never stored server-side**.
+
+**Request (all fields optional):**
+```json
+{ "name": "My Sub-Agent", "email": "agent@example.com" }
+```
+**Response:**
+```json
+{
+  "walletId": "wallet_...",
+  "walletStatus": "deploying",
+  "claimUrl": "https://app.paywithlocus.com/claim/...",
+  "defaults": { "allowanceUsdc": "10.00", "maxAllowedTxnSizeUsdc": "5.00" },
+  "apiKey": "locus_...",
+  "ownerPrivateKey": "0x..."
+}
+```
+
+### `GET /api/wallet`
+Returns live Locus wallet balance, transaction history, and a derived spending-controls summary.
+
+**Response:**
+```json
+{
+  "balance": { "balance": "2.74", "address": "0x..." },
+  "transactions": [...],
+  "spendingControls": {
+    "totalSpentUsdc": "2.26",
+    "pendingApprovalCount": 0,
+    "pendingApprovals": [],
+    "policyRejectedCount": 0,
+    "governance": {
+      "status": "within_limits",
+      "note": "Allowance and per-txn limits are configured on the Locus dashboard..."
+    }
+  }
+}
+```
 
 ### `GET /api/health`
 Returns service status, mock/real mode, and environment validation.
@@ -583,17 +628,20 @@ src/
 │       ├── 05-generate-email.ts  # Claude AI email generation
 │       ├── 06-send-outreach.ts   # AgentMail email dispatch
 │       ├── 07-poll-replies.ts    # Payment polling + webhook handler
-│       └── 08-deliver-work.ts    # Automated work delivery on payment confirmed
+        └── 08-deliver-work.ts    # Automated delivery + Locus email escrow payment
 ├── app/
 │   ├── api/
 │   │   ├── agent/start/          # Run allocation endpoint
 │   │   ├── agent/stream/         # SSE stream + agent executor
 │   │   ├── agent/runs/           # Run history endpoint
+│   │   ├── agent/register/       # Locus sub-agent self-registration
+│   │   ├── agent/hire/           # x402-gated A2A hire endpoint
+│   │   ├── wallet/               # Live balance + spending controls
 │   │   └── webhooks/locus/       # Payment webhook receiver
 │   ├── dashboard/                # Main UI (real-time agent dashboard)
 │   └── globals.css               # Terminal-aesthetic design system
 └── lib/
-    ├── locus.ts                  # Locus API client (checkout, webhooks)
+    ├── locus.ts                  # Locus API client (checkout, escrow, registration, webhooks)
     ├── store.ts                  # In-memory run store + JSON persistence
     ├── utils.ts                  # uuid, nowIso, sleep, fmt
     └── providers/
