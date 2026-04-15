@@ -28,7 +28,7 @@ function buildDemoRun(): Run {
     {
       id: "p-02", runId: DEMO_RUN_ID,
       company: { id: "c-02", name: "Meridian SaaS Co.", domain: "meridiansaas.com", industry: "B2B SaaS", size: "51-200", location: "Austin, TX", techStack: ["React", "Node.js", "PostgreSQL"], description: "B2B SaaS platform for revenue operations and pipeline analytics, migrating to a modern React stack." },
-      contact: { firstName: "Priya", lastName: "Ramesh", title: "CTO", email: "p.ramesh@meridiansaas.com", reputation: "verified" },
+      contact: { firstName: "Priya", lastName: "Ramesh", title: "CTO", email: "p.ramesh@meridiansaas.com", emailReputation: "valid" },
       ofacResult: { clean: true, matches: [] },
       status: "delivered",
       outreachEmail: "Subject: Full-stack help for Meridian's React migration\n\nHi Priya,\n\nI noticed Meridian SaaS is migrating to React — I'd love to help accelerate that. I'm a full-stack developer available at $50 USDC/hr, paid instantly via the link below.\n\nPay to start: https://checkout.paywithlocus.com/sess_meridian_lv8r2x\n\nBest,\nRainmaker Agent",
@@ -43,7 +43,7 @@ function buildDemoRun(): Run {
     {
       id: "p-03", runId: DEMO_RUN_ID,
       company: { id: "c-03", name: "InfraStack Labs", domain: "infrastacklabs.io", industry: "DevOps / Cloud", size: "11-50", location: "London, UK", techStack: ["Kubernetes", "Go", "Terraform"], description: "Cloud-native infrastructure consultancy building internal developer platforms on Kubernetes." },
-      contact: { firstName: "James", lastName: "Okafor", title: "Head of Engineering", email: "james@infrastacklabs.io", reputation: "verified" },
+      contact: { firstName: "James", lastName: "Okafor", title: "Head of Engineering", email: "james@infrastacklabs.io", emailReputation: "valid" },
       ofacResult: { clean: true, matches: [] },
       status: "awaiting_payment",
       outreachEmail: "Subject: Full-stack dev for InfraStack's K8s platform\n\nHi James,\n\nLove what InfraStack is building with Kubernetes. I can help build out your internal dev tooling at $50 USDC/hr.\n\nPay to start: https://checkout.paywithlocus.com/sess_infrastack_mx4j9w\n\nBest,\nRainmaker Agent",
@@ -56,7 +56,7 @@ function buildDemoRun(): Run {
     {
       id: "p-04", runId: DEMO_RUN_ID,
       company: { id: "c-04", name: "NovaPay Fintech", domain: "novapayfintech.com", industry: "Fintech", size: "51-200", location: "Singapore", techStack: ["TypeScript", "Next.js", "Stripe"], description: "SEA-focused payments infrastructure startup processing cross-border USDC settlements." },
-      contact: { firstName: "Mei", lastName: "Chen", title: "VP Engineering", email: "m.chen@novapayfintech.com", reputation: "verified" },
+      contact: { firstName: "Mei", lastName: "Chen", title: "VP Engineering", email: "m.chen@novapayfintech.com", emailReputation: "valid" },
       ofacResult: { clean: true, matches: [] },
       status: "outreach_sent",
       outreachEmail: "Subject: Full-stack help for NovaPay's Next.js stack\n\nHi Mei,\n\nI saw NovaPay is scaling its Next.js payment platform — happy to contribute at $50 USDC/hr.\n\nPay to start: https://checkout.paywithlocus.com/sess_novapay_rk7z1t\n\nBest,\nRainmaker Agent",
@@ -69,7 +69,7 @@ function buildDemoRun(): Run {
     {
       id: "p-05", runId: DEMO_RUN_ID,
       company: { id: "c-05", name: "Cortex Analytics", domain: "cortex.ai", industry: "AI / Data", size: "11-50", location: "Berlin, DE", techStack: ["Python", "FastAPI", "dbt"], description: "AI-native analytics platform turning warehouse data into real-time business intelligence dashboards." },
-      contact: { firstName: "Tobias", lastName: "Werner", title: "Co-Founder", email: "t.werner@cortex.ai", reputation: "verified" },
+      contact: { firstName: "Tobias", lastName: "Werner", title: "Co-Founder", email: "t.werner@cortex.ai", emailReputation: "valid" },
       ofacResult: { clean: true, matches: [] },
       status: "outreach_sent",
       outreachEmail: "Subject: Full-stack dev for Cortex's FastAPI data platform\n\nHi Tobias,\n\nCortex's Python/FastAPI stack caught my eye — I'd love to help build out your analytics features at $50 USDC/hr.\n\nPay to start: https://checkout.paywithlocus.com/sess_cortex_pl2w8v\n\nBest,\nRainmaker Agent",
