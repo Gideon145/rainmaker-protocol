@@ -1,6 +1,7 @@
 import { mail } from "@/lib/providers";
 import { USE_MOCK } from "@/lib/providers";
 import { getRun, getProspect, upsertProspect, addAuditEntry, updateRun } from "@/lib/store";
+import { redisConsumePayment } from "@/lib/redis";
 import { uuid, nowIso, sleep } from "@/lib/utils";
 import { eventBus } from "@/agent/events";
 import { deliverWork } from "./08-deliver-work";
@@ -40,6 +41,25 @@ export async function pollForReplies(runId: string): Promise<void> {
     );
     if (awaitingProspects.length === 0) break;
 
+    // ── Check Redis payment signals first (cross-instance webhook delivery) ──
+    // The Locus webhook may have fired on a different Vercel serverless instance.
+    // It publishes a signal to Redis; we consume it here on the SSE instance.
+    for (const prospect of awaitingProspects) {
+      const signal = await redisConsumePayment(currentRun.id, prospect.id);
+      if (signal) {
+        await handlePaymentConfirmed(
+          currentRun.id,
+          prospect.id,
+          signal.txHash,
+        );
+        // Re-read to see if run has since completed
+        const reloaded = getRun(currentRun.id);
+        if (!reloaded || reloaded.status !== "running") return;
+        continue;
+      }
+    }
+
+    // ── Also poll AgentMail + Locus session status (same-instance fallback) ─
     const messages = await mail.listMessages(inboxId);
 
     for (const msg of messages) {

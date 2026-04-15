@@ -365,11 +365,12 @@ function PipelineTracker({ prospects }: { prospects: Prospect[] }) {
 
 // ─── Launch Form ─────────────────────────────────────────────────────────────
 
-function LaunchForm({ onStart, loading, disabled, agentEmail }: {
+function LaunchForm({ onStart, loading, disabled, agentEmail, onDemo }: {
   onStart: (skill: string, rate: number) => void;
   loading: boolean;
   disabled: boolean;
   agentEmail: string | null;
+  onDemo?: () => void;
 }) {
   const [skill, setSkill] = useState("full-stack development");
   const [rate, setRate]   = useState("50");
@@ -428,6 +429,14 @@ function LaunchForm({ onStart, loading, disabled, agentEmail }: {
               : "⚡ LAUNCH RAINMAKER"}
           </span>
         </button>
+
+        {onDemo && (
+          <button type="button" onClick={onDemo} disabled={loading || disabled}
+            className="btn-neon"
+            style={{ borderColor: "var(--accent-cyan)", color: "var(--accent-cyan)", marginTop: "0.3rem", fontSize: "0.65rem" }}>
+            ▶ REPLAY DEMO RUN
+          </button>
+        )}
 
         {disabled && !loading && (
           <p className="text-sub text-center" style={{ fontSize: "0.6rem" }}>
@@ -788,6 +797,60 @@ export default function DashboardPage() {
     }
   }
 
+  function handleDemo() {
+    esRef.current?.close();
+    setRun(null);
+    setRunId(null);
+    setLaunching(true);
+    setSSE(false);
+    const es = new EventSource("/api/agent/replay");
+    esRef.current = es;
+    es.onerror = () => { es.close(); setSSE(false); setLaunching(false); };
+    es.onopen  = () => setSSE(true);
+    es.onmessage = (e) => {
+      try {
+        const ev: SSEEvent = JSON.parse(e.data);
+        if (ev.type === "heartbeat") return;
+        if (ev.type === "run_started") {
+          const u = ev.payload as Run;
+          setRunId(u.id);
+          setRun(u);
+          setAllRuns((p) => [u, ...p.filter((r) => r.id !== u.id)]);
+          setLaunching(false);
+        }
+        if (["run_completed", "run_failed", "budget_exhausted"].includes(ev.type)) {
+          const u = ev.payload as Run;
+          if (u?.prospects !== undefined) {
+            setRun(u);
+            setAllRuns((p) => { const i = p.findIndex((r) => r.id === u.id); if (i>=0){const c=[...p];c[i]=u;return c;} return p; });
+          }
+          es.close(); setSSE(false); setLaunching(false);
+        }
+        if (ev.type === "prospect_update") {
+          const p = ev.payload as Prospect;
+          setRun((prev) => {
+            if (!prev) return prev;
+            const list = prev.prospects ?? [];
+            return { ...prev, prospects: list.find((x: Prospect) => x.id === p.id) ? list.map((x: Prospect) => x.id === p.id ? p : x) : [...list, p] };
+          });
+        }
+        if (ev.type === "audit_entry") {
+          const entry = ev.payload as AuditEntry;
+          setRun((prev) => prev ? { ...prev, auditLog: [...(prev.auditLog ?? []), entry] } : prev);
+        }
+        if (ev.type === "balance_update") setBalance(ev.payload as WalletBalance);
+        if (ev.type === "payment_received") {
+          const p = ev.payload as { companyName?: string; company?: { name?: string } };
+          setToast(`✓ Payment received from ${p?.companyName ?? p?.company?.name ?? "prospect"}!`);
+        }
+        if (ev.type === "work_delivered") {
+          const p = ev.payload as { companyName?: string; company?: { name?: string } };
+          setToast(`★ Work delivered to ${p?.companyName ?? p?.company?.name ?? "client"}!`);
+        }
+      } catch { /* ignore */ }
+    };
+  }
+
   const isRunning = run?.status === "running";
   const prospects = run?.prospects ?? [];
   const auditLog  = run?.auditLog  ?? [];
@@ -816,7 +879,7 @@ export default function DashboardPage() {
 
           {/* Sidebar */}
           <div className="flex flex-col gap-4">
-            <LaunchForm onStart={handleStart} loading={launching} disabled={isRunning} agentEmail={run?.agentEmail ?? null} />
+            <LaunchForm onStart={handleStart} onDemo={handleDemo} loading={launching} disabled={isRunning} agentEmail={run?.agentEmail ?? null} />
             <RunHistory runs={allRuns} currentRunId={runId} onSelect={(id) => { const f = allRuns.find((r) => r.id === id); if (f) { setRunId(id); setRun(f); } }} />
           </div>
 
@@ -854,6 +917,11 @@ export default function DashboardPage() {
                         Prospect cards will appear here in real-time as the agent discovers and processes targets.
                       </div>
                     </div>
+                    <button onClick={handleDemo} disabled={launching} type="button"
+                      className="btn-neon"
+                      style={{ borderColor: "var(--accent-cyan)", color: "var(--accent-cyan)", maxWidth: "240px", fontSize: "0.65rem" }}>
+                      ▶ REPLAY DEMO RUN
+                    </button>
                   </div>
                 )}
               </div>

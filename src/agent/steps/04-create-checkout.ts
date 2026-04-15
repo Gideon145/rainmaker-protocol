@@ -1,5 +1,6 @@
 import { createCheckoutSession, getBalance } from "@/lib/locus";
 import { upsertProspect, addAuditEntry, storeWebhookSecret, updateRun } from "@/lib/store";
+import { redisStoreSession } from "@/lib/redis";
 import { uuid, nowIso } from "@/lib/utils";
 import { eventBus } from "@/agent/events";
 import type { Prospect, Run } from "@/lib/providers/types";
@@ -52,6 +53,13 @@ export async function createCheckout(prospect: Prospect, run: Run): Promise<Pros
 
     if (result.webhookSecret) {
       storeWebhookSecret(sessionId, result.webhookSecret);
+      // Persist session → run mapping in Redis so any Vercel instance can
+      // resolve the sessionId when the webhook fires (cross-instance safety).
+      await redisStoreSession(sessionId, {
+        runId: run.id,
+        prospectId: prospect.id,
+        webhookSecret: result.webhookSecret,
+      });
     }
 
     // Refresh wallet balance after session creation
