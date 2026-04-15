@@ -18,7 +18,7 @@
   <img src="./screenshots/02-how-it-works.png" width="49%" alt="Dashboard — 8-step pipeline breakdown" />
 </p>
 <p>
-  <img src="./screenshots/03-live-run.png" width="49%" alt="Live run — 11 targets, 1 OFAC block (Volkov Syndicate), 1 delivered, real-time audit log" />
+  <img src="./screenshots/03-live-run.png" width="49%" alt="Demo replay — 5 targets: OFAC block (Volkov Syndicate, 96/100 confidence), Meridian SaaS delivered ($50 paid on-chain), InfraStack awaiting payment, 2 outreach sent — $2.64 spent · $50 earned · 18.9x ROI" />
   <img src="./screenshots/04-mission-complete.png" width="49%" alt="Mission complete — $2.64 spent, $50.00 earned, 18.9x ROI" />
 </p>
 
@@ -506,9 +506,17 @@ git push        # auto-deploys to Vercel
 LOCUS_API_KEY
 LOCUS_PRIVATE_KEY
 LOCUS_API_BASE
-USE_MOCK          # true (safe demo) | false (live with real APIs)
+USE_MOCK                   # true (safe demo) | false (live with real APIs)
 NEXT_PUBLIC_APP_URL
+
+# Optional — Upstash Redis (fixes cross-instance webhook/SSE race condition on Vercel)
+# Without these, webhook and SSE must land on the same serverless instance.
+# Get free credentials at: https://console.upstash.com
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
 ```
+
+> **Cross-instance race condition fix:** Vercel serverless functions don't share memory. When Locus fires a `CHECKOUT_PAID` webhook it can land on a different instance than the one holding the user's SSE stream. With Upstash Redis configured, the webhook writes a `rmp:payment:{runId}:{prospectId}` key (TTL 2h) and the polling loop atomically reads + deletes it — ensuring payment confirmation always reaches the right instance. Without Redis the app falls back to in-memory lookup (works in local dev, unreliable on Vercel under load).
 
 ---
 
