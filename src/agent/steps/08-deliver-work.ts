@@ -80,7 +80,7 @@ export async function deliverWork(prospect: Prospect, run: Run): Promise<void> {
       : `Email escrow payment to ${prospect.contact.email} failed: ${escrow.error ?? "unknown error"}. Delivery still complete — escrow is best-effort.`,
     cost: escrow.ok ? 0.50 : 0,
     txHash: escrow.transactionId ?? null,
-    status: escrow.ok ? "success" : "failed",
+    status: escrow.ok ? "success" : "error",
   });
 
   eventBus.emit(run.id, "work_delivered", {
