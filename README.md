@@ -120,6 +120,17 @@ All 10 transactions: **Status Completed · Agent-initiated · On Base**
 
 > Clockwise from top-left: single x402 tx in transaction history → agent wallet showing $3.00 remaining with $2.00 confirmed → full 10-tx history from the live run → x402 payment detail with on-chain response data including `inbox_id: test-rainmaker@agentmail.to`
 
+### Apr 15 2026 — Live Agent Self-Registration
+
+One click on the **◈ SPAWN SUB-AGENT WALLET** button in the dashboard calls `POST /api/agent/register` → Locus `POST /api/register`. A brand-new agent wallet is created in real time — wallet ID, spending defaults, and a Locus claim URL returned instantly.
+
+<p>
+  <img src="./screenshots/Screenshot 2026-04-15 184706.png" width="49%" alt="Dashboard — sub-agent self-registration result: wallet ID f4ee0a5e, $10 allowance, $5 max txn, claim link, success toast" />
+  <img src="./screenshots/Screenshot 2026-04-15 184646.png" width="49%" alt="Locus dashboard — Claim Your Agent page for 'Rainmaker Sub-Agent', confirming the wallet was created on the Locus platform" />
+</p>
+
+> Left: dashboard shows the new wallet ID (`f4ee0a5e-d6bf-4b9e-8f7a-a29e29196e62`), $10.00 USDC allowance, $5.00 max txn size, and live claim link — toast confirms **"Sub-agent wallet created via Locus!"**. Right: the Locus "Claim Your Agent" page at `beta.paywithlocus.com/register/claim/...` confirming the sub-agent account exists on the Locus platform.
+
 ---
 
 ## Architecture
